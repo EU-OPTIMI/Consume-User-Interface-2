@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offer Detail</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 30px;
+        }
+        .card {
+            border-radius: 0.5rem;
+        }
+        .btn {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="my-4">Offer Details</h1>
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-3">{{ offer.title }}</h5>
+                <p class="card-text"><strong>Description:</strong> {{ offer.description }}</p>
+                <p class="card-text"><strong>Creation Date:</strong> {{ offer.creationDate }}</p>
+                <p class="card-text"><strong>Modification Date:</strong> {{ offer.modificationDate }}</p>
+                <p class="card-text"><strong>Keywords:</strong> {{ offer.keywords|join:", " }}</p>
+                <p class="card-text"><strong>Publisher:</strong> {{ offer.publisher }}</p>
+                <p class="card-text"><strong>Language:</strong> {{ offer.language }}</p>
+                <p class="card-text"><strong>License:</strong> {{ offer.license }}</p>
+                <p class="card-text"><strong>Version:</strong> {{ offer.version }}</p>
+                <p class="card-text"><strong>Sovereign:</strong> {{ offer.sovereign }}</p>
+                <p class="card-text"><strong>Endpoint Documentation:</strong> {{ offer.endpointDocumentation }}</p>
+                <p class="card-text"><strong>Payment Modality:</strong> {{ offer.paymentModality }}</p>
+                <p class="card-text"><strong>Additional Information:</strong> {{ offer.additional }}</p>
+                <p class="card-text"><strong>Samples:</strong> {{ offer.samples|join:", " }}</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <a class="btn btn-primary" href="{% url 'connector_offers' %}">Back to Offers</a>
+            <a class="btn btn-secondary" href="{% url 'consume_offer' offer_id %}">Consume</a>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
