@@ -3,39 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Offers</title>
+    <title>Connectors Offerings</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
-            background-color: #f8f9fa;
+            background-color: #f4f7fa;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #333;
         }
+        /* Header */
+        .header {
+            background-color: #0056b3;
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 2.75rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 1.2rem;
+            font-weight: 300;
+        }
+        /* Card Design */
         .card-container {
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
         .card {
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 0.75rem;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            transition: all 0.3s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+        .card-body {
+            padding: 20px;
         }
         .card-title {
-            font-size: 1.25rem;
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #0056b3;
         }
         .card-text {
-            font-size: 0.875rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 1rem;
+            margin-bottom: 12px;
         }
+        .card-text strong {
+            font-weight: 500;
+            color: #495057;
+        }
+        /* Pagination */
         .pagination {
             justify-content: center;
+            padding: 30px 0;
+        }
+        .pagination .page-item .page-link {
+            color: #0056b3;
+            border-radius: 0.5rem;
+            padding: 10px 16px;
+            border: 1px solid #0056b3;
+        }
+        .pagination .page-item.active .page-link,
+        .pagination .page-item:hover .page-link {
+            background-color: #0056b3;
+            color: white;
+            border-color: #0056b3;
+        }
+        .pagination .page-item.disabled .page-link {
+            color: #adb5bd;
+            border-color: #e9ecef;
         }
     </style>
 </head>
 <body>
+
+    <!-- Header Section -->
+    <div class="header">
+        <h1>Connectors Offerings</h1>
+        <p>Explore the latest offers from connectors</p>
+    </div>
+
+    <!-- Main Content -->
     <div class="container">
-        <h1 class="my-4 text-center">API Offers</h1>
         <div class="row">
             {% for offer in offers %}
-            <div class="col-md-4 col-lg-3 card-container">
+            <div class="col-md-6 col-lg-4 card-container">
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">{{ offer.title }}</h5>
@@ -44,7 +102,7 @@
                         <p class="card-text"><strong>Modification Date:</strong> {{ offer.modificationDate }}</p>
                         <p class="card-text"><strong>Keywords:</strong> {{ offer.keywords|join:", " }}</p>
                         <p class="card-text">
-                            <strong>Offer ID:</strong> <a href="{% url 'selected_offer' offer.offer_id %}">{{ offer.offer_id }}</a>
+                            <strong>Offer ID:</strong> <a href="{% url 'selected_offer' offer.offer_id %}" class="text-primary">{{ offer.offer_id }}</a>
                         </p>
                     </div>
                 </div>
@@ -58,36 +116,34 @@
                 <!-- First and Previous Buttons -->
                 {% if pagination.prev %}
                 <li class="page-item"><a class="page-link" href="?page=1&size={{ pagination.size }}">First</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ pagination.prev|slice:"-1:" }}&size={{ pagination.size }}">Previous</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ pagination.prev }}&size={{ pagination.size }}">Previous</a></li>
                 {% else %}
                 <li class="page-item disabled"><span class="page-link">First</span></li>
                 <li class="page-item disabled"><span class="page-link">Previous</span></li>
                 {% endif %}
 
                 <!-- Page Numbers -->
-                {% with page_range|slice:":5" as first_pages %}
-                {% for i in first_pages %}
-                <li class="page-item {% if i == pagination.current_page %}active{% endif %}">
-                    <a class="page-link" href="?page={{ i }}&size={{ pagination.size }}">{{ i }}</a>
-                </li>
-                {% endfor %}
-                {% endwith %}
-
-                {% if pagination.current_page < pagination.total_pages|add:"-4" %}
+                {% if pagination.current_page > 3 %}
+                <li class="page-item"><a class="page-link" href="?page=1&size={{ pagination.size }}">1</a></li>
                 <li class="page-item disabled"><span class="page-link">...</span></li>
                 {% endif %}
 
-                {% with page_range|slice:"-5:" as last_pages %}
-                {% for i in last_pages %}
+                {% for i in pagination.page_range %}
+                {% if i >= pagination.current_page|add:-2 and i <= pagination.current_page|add:2 %}
                 <li class="page-item {% if i == pagination.current_page %}active{% endif %}">
                     <a class="page-link" href="?page={{ i }}&size={{ pagination.size }}">{{ i }}</a>
                 </li>
+                {% endif %}
                 {% endfor %}
-                {% endwith %}
+
+                {% if pagination.current_page < pagination.total_pages|add:-2 %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                <li class="page-item"><a class="page-link" href="?page={{ pagination.total_pages }}&size={{ pagination.size }}">{{ pagination.total_pages }}</a></li>
+                {% endif %}
 
                 <!-- Next and Last Buttons -->
                 {% if pagination.next %}
-                <li class="page-item"><a class="page-link" href="?page={{ pagination.next|slice:"-1:" }}&size={{ pagination.size }}">Next</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ pagination.next }}&size={{ pagination.size }}">Next</a></li>
                 <li class="page-item"><a class="page-link" href="?page={{ pagination.total_pages }}&size={{ pagination.size }}">Last</a></li>
                 {% else %}
                 <li class="page-item disabled"><span class="page-link">Next</span></li>
@@ -96,6 +152,7 @@
             </ul>
         </nav>
     </div>
+
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>

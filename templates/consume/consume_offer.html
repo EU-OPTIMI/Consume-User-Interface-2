@@ -3,31 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consume Page</title>
+    <title>Consume Offer</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
-            background-color: #f8f9fa;
+            background-color: #f4f7fa;
         }
         .container {
             margin-top: 50px;
+            max-width: 700px;
+        }
+        .card {
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            background-color: #fff;
+        }
+        .card-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #0056b3;
+        }
+        .card-text {
+            font-size: 1.1rem;
+            color: #495057;
+        }
+        .input-group {
+            margin-top: 20px;
         }
         .btn-secondary {
             margin-top: 20px;
+            font-size: 1rem;
+            padding: 10px 20px;
+        }
+        .open-icon {
+            margin-left: 10px;
+            color: #007bff;
+            cursor: pointer;
+        }
+        .open-icon:hover {
+            color: #0056b3;
         }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <div class="card p-4">
-            <h1 class="card-title mb-4">Consume Page</h1>
-            <p class="card-text">Here is the URL to the data:</p>
-            <a class="d-block mb-3 text-primary" href="{{ offer_url }}" target="_blank">{{ offer_url }}</a>
+        <div class="card">
+            <h1 class="card-title mb-4">Offer Negotiation Complete</h1>
+            <p class="card-text">The offer negotiation has been completed, and the contract has been successfully agreed upon.</p>
+            
+            <p class="card-text">Here is the URL to access the data:</p>
+
+            <!-- URL Field with Open Icon -->
+            <div class="input-group">
+                <input type="text" class="form-control" id="offerUrl" value="{{ artifact_url }}" readonly>
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary" onclick="openInNewTab('{{ artifact_url }}')">
+                        <i class="fas fa-external-link-alt"></i> Open
+                    </button>
+                </div>
+            </div>
+
+            <!-- Back to Offers Button -->
             <a class="btn btn-secondary" href="{% url 'connector_offers' %}">Back to Offers</a>
         </div>
     </div>
+
+    <!-- Script to Open URL in New Tab -->
+    <script>
+        function openInNewTab(url) {
+            window.open(url, '_blank').focus();
+        }
+    </script>
+
+    <!-- Include JS dependencies -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
 </body>
 </html>

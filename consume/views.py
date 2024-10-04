@@ -63,6 +63,5 @@ def selected_offer(request, offer_id):
 
 def consume_offer(request, offer_id):
     offer_url = f"https://ds2provider.collab-cloud.eu:8081/api/offers/{offer_id}"
-    if offer_url:
-        runner(offer_url)
-    return render(request, 'consume/consume_offer.html',{'offer_url': offer_url})
+    artifact_url = runner(offer_url) 
+    return render(request, 'consume/consume_offer.html',{'artifact_url': artifact_url})

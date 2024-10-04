@@ -102,7 +102,7 @@ def get_data(artifact):
 
     response = requests.get(artifact, headers=headers)
     response_json = response.json()
-    print("response_json", response_json)
+    return response_json
 
 def runner(offer_url):
     offer_id = offer_url.split('/')[-1]
@@ -111,6 +111,7 @@ def runner(offer_url):
     action, artifact = description_request(offer, catalog_url)
     agreement_url = contract_request(action, artifact, offer_id)
     artifact_data_url = get_agreement(agreement_url)
-    get_data(artifact_data_url)
+    artifact_url = get_data(artifact_data_url)
+    return artifact_url
 
     
