@@ -1,5 +1,6 @@
 services:
   consume:
+    container_name: consume
     build: .
     command: gunicorn core.wsgi:application --bind 0.0.0.0:8000
     volumes:
