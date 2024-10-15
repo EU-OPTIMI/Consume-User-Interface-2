@@ -40,7 +40,7 @@ jobs:
         elif [ "${BRANCH_NAME}" == "production" ]; then
           IMAGE_TAG="production:latest"
         else
-          IMAGE_TAG="production:${BRANCH_NAME}"
+          IMAGE_TAG="stage:${BRANCH_NAME}"
         fi
         echo "REPO_NAME=${REPO_NAME}" >> $GITHUB_ENV
         echo "REPO_OWNER=${REPO_OWNER}" >> $GITHUB_ENV
