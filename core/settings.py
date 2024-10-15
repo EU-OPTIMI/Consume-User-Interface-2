@@ -1,5 +1,12 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Set the absolute path to the .env file
+ENV_PATH = '/home/vmuser/REPOWER/Runner/.env'  # Replace with your actual path
+
+# Load environment variables from the .env file
+load_dotenv(ENV_PATH)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -59,10 +66,11 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': os.environ.get('DJANGO_DB_ENGINE', 'django.db.backends.sqlite3'),
-        'NAME': os.environ.get('DJANGO_DB_NAME', BASE_DIR / 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.getenv('DJANGO_DB_PATH', os.path.join(BASE_DIR, 'db.sqlite3')),
     }
 }
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

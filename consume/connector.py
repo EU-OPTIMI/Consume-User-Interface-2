@@ -32,6 +32,7 @@ def get_selected_offers_catalog_url(offer):
     return catalog_url
 
 def description_request(offer, catalog_url):
+    print("catalog_urlcatalog_url", catalog_url)
     url = 'https://ds2consumer.collab-cloud.eu:8081/api/ids/description'
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
@@ -44,6 +45,7 @@ def description_request(offer, catalog_url):
     # Perform the POST request
     response = requests.post(url, headers=headers, params=params)
     response_json = response.json()
+    print("RRRRRR", response_json)
     action = response_json['ids:offeredResource'][0]['ids:contractOffer'][0]['ids:permission'][0]['ids:action'][0]['@id']
     artifact =response_json['ids:offeredResource'][0]['ids:representation'][0]['ids:instance'][0]['@id']
     return action, artifact
