@@ -6,3 +6,9 @@ services:
       - .:/app
     ports:
       - "8000:8000"
+    environment:
+      DJANGO_SECRET_KEY: 'your-secret-key'
+      DJANGO_DEBUG: 'True'
+      DJANGO_ALLOWED_HOSTS: 'localhost,127.0.0.1'
+      DJANGO_DB_ENGINE: 'django.db.backends.sqlite3'
+      DJANGO_DB_NAME: '/app/db.sqlite3'
