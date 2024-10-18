@@ -78,6 +78,8 @@ def contract_request(action, artifact, offer_id):
 
     response = requests.post(url, headers=headers, params=params, data=json.dumps(payload))
     response_json = response.json()
+    print('--------------------------------------------------------------------------------------------')
+    print('CONTRACT REQUEST RESPONSE:', response_json)
     agreement_url_1 = response_json["_links"]["artifacts"]["href"]
     agreement_url = agreement_url_1.split('{')[0] 
     return agreement_url
@@ -111,6 +113,9 @@ def runner(offer_url):
     offer = get_selected_offer(offer_id)
     catalog_url = get_selected_offers_catalog_url(offer)
     action, artifact = description_request(offer, catalog_url)
+    print('###########INSIDE OF THE RUNNER##################')
+    print('--------------------------------------------------------------')
+    print('DESCRIPTION REQUEST ACTION:', action)
     agreement_url = contract_request(action, artifact, offer_id)
     artifact_data_url = get_agreement(agreement_url)
     artifact_url = get_data(artifact_data_url)
