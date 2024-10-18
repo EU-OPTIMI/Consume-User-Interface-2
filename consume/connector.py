@@ -93,32 +93,30 @@ def get_agreement(agreement_url):
 
     response = requests.get(url, headers=headers)
     response_json = response.json()
-    artifact_data_url = response_json["_embedded"]["artifacts"][0]["_links"]["data"]["href"]
+    print('EEEASYagreement',response_json)
+    artifact_url = response_json["_embedded"]["artifacts"][0]["_links"]["data"]["href"]
         
-    return artifact_data_url
+    return artifact_url
     
 
-
-def get_data(artifact):
-    headers = {
-        'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
-    }
-
-    response = requests.get(artifact, headers=headers)
-    response_json = response.json()
-    return response_json
+#!!!! Maybe this should just check the status if we receive the link to the data?
+#def get_data(artifact):
+#    headers = {
+#        'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
+#    }
+#
+#    response = requests.get(artifact, headers=headers)
+#    response_json = response.json()
+#    print('EEEEEEASY',response_json)
+#    return response_json
 
 def runner(offer_url):
     offer_id = offer_url.split('/')[-1]
     offer = get_selected_offer(offer_id)
     catalog_url = get_selected_offers_catalog_url(offer)
     action, artifact = description_request(offer, catalog_url)
-    print('###########INSIDE OF THE RUNNER##################')
-    print('--------------------------------------------------------------')
-    print('DESCRIPTION REQUEST ACTION:', action)
     agreement_url = contract_request(action, artifact, offer_id)
-    artifact_data_url = get_agreement(agreement_url)
-    artifact_url = get_data(artifact_data_url)
+    artifact_url = get_agreement(agreement_url)
     return artifact_url
 
     
