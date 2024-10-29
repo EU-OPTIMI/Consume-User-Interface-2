@@ -45,7 +45,7 @@ def description_request(offer, catalog_url):
     # Perform the POST request
     response = requests.post(url, headers=headers, params=params)
     response_json = response.json()
-    print("RRRRRR", response_json)
+    #print("RRRRRR", response_json)
     action = response_json['ids:offeredResource'][0]['ids:contractOffer'][0]['ids:permission'][0]['ids:action'][0]['@id']
     artifact =response_json['ids:offeredResource'][0]['ids:representation'][0]['ids:instance'][0]['@id']
     return action, artifact
@@ -99,16 +99,20 @@ def get_agreement(agreement_url):
     return artifact_url
     
 
-#!!!! Maybe this should just check the status if we receive the link to the data?
-#def get_data(artifact):
-#    headers = {
-#        'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
-#    }
-#
-#    response = requests.get(artifact, headers=headers)
-#    response_json = response.json()
-#    print('EEEEEEASY',response_json)
-#    return response_json
+def get_data(artifact_url):
+    headers = {
+        'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
+    }
+
+    response = requests.get(artifact_url, headers=headers)
+    print('--------------------------------------------------------------')
+    print('GEEEET DATA RESPONSE')
+    print("Status Code:", response.status_code)
+    print("Headers:", response.headers)
+    print("Content:", response.content)  # Or use response.text for string output
+    print("URL:", response.url)
+    print('RESPONSE', response.text)
+    return response
 
 def runner(offer_url):
     offer_id = offer_url.split('/')[-1]
@@ -117,6 +121,9 @@ def runner(offer_url):
     action, artifact = description_request(offer, catalog_url)
     agreement_url = contract_request(action, artifact, offer_id)
     artifact_url = get_agreement(agreement_url)
+    print('WHATIS IN ARTIFACTURL', artifact_url)
+    response = get_data(artifact_url)
+
     return artifact_url
 
     

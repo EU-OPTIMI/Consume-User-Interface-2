@@ -91,18 +91,19 @@
                 <p class="card-text"><strong>Language:</strong> {{ offer.language }}</p>
                 <p class="card-text"><strong>License:</strong> {{ offer.license }}</p>
                 <p class="card-text"><strong>Version:</strong> {{ offer.version }}</p>
-                <p class="card-text"><strong>Sovereign:</strong> {{ offer.sovereign }}</p>
-                <p class="card-text"><strong>Endpoint Documentation:</strong> {{ offer.endpointDocumentation }}</p>
-                <p class="card-text"><strong>Payment Modality:</strong> {{ offer.paymentModality }}</p>
-                <p class="card-text"><strong>Additional Information:</strong> {{ offer.additional }}</p>
-                <p class="card-text"><strong>Samples:</strong> {{ offer.samples|join:", " }}</p>
+                <!--p class="card-text"><strong>Sovereign:</strong> {{ offer.sovereign }}</p-->
+                <!--p class="card-text"><strong>Endpoint Documentation:</strong> {{ offer.endpointDocumentation }}</p-->
+                <!--p class="card-text"><strong>Payment Modality:</strong> {{ offer.paymentModality }}</p-->
+                <!--p class="card-text"><strong>Additional Information:</strong> {{ offer.additional }}</p-->
+                <!--p class="card-text"><strong>Samples:</strong> {{ offer.samples|join:", " }}</p-->
             </div>
         </div>
 
         <!-- Buttons for actions -->
         <div class="btn-container">
-            <a class="btn btn-primary" href="{% url 'connector_offers' %}">Back to Offers</a>
-            <a class="btn btn-secondary" href="{% url 'consume_offer' offer_id %}">Consume</a>
+            <a class="btn btn-primary" href="{% url 'consume_offer' offer_id %}">Consume</a>
+            <a class="btn btn-secondary" href="{% url 'connector_offers' %}">Back to Offers</a>
+            
         </div>
     </div>
 

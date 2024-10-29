@@ -18,6 +18,7 @@ def connector_offers(request):
 
 
     data = response.json()
+    print('JSON RESPONSE', data)
     
     offers = data.get('_embedded', {}).get('resources', [])
     pagination_links = data.get('_links', {})
@@ -38,9 +39,11 @@ def connector_offers(request):
         })
 
     
-    total_pages = page_info.get('totalPages', 1)
+    total_pages = page_info.get('totalPages', 1) - 1 #Can we remove like this the extra empty page?
     current_page = int(page_info.get('number', 1))
     page_range = range(1, total_pages + 1)
+    print("Pagination Info:")
+    print(f"Total Pages: {total_pages}, Current Page: {current_page}, Page Size: {size}")
     
     return render(request, 'consume/connector_offers.html', {
         'offers': offer_data,
