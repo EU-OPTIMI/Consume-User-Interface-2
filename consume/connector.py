@@ -5,7 +5,7 @@ import re
 from requests.auth import HTTPBasicAuth
 
 def get_selected_offer(offer_id):
-    url = f'https://localhost:8081/api/offers/{offer_id}'
+    url = f'https://connector:8081/api/offers/{offer_id}'
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
@@ -34,12 +34,12 @@ def get_selected_offers_catalog_url(offer):
 
 def description_request(offer, catalog_url):
     print("catalog_urlcatalog_url", catalog_url)
-    url = 'https://localhost:8081/api/ids/description'
+    url = 'https://connector:8081/api/ids/description'
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
     params = {
-        'recipient': 'https://localhost:8081/api/ids/data',
+        'recipient': 'https://connector:8081/api/ids/data',
         'elementId': catalog_url
     }
     
@@ -53,14 +53,14 @@ def description_request(offer, catalog_url):
     
 
 def contract_request(action, artifact, offer_id):
-    url = 'https://localhost:8081/api/ids/contract'
+    url = 'https://connector:8081/api/ids/contract'
     headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
     params = {
-        'recipient': 'https://localhost:8081/api/ids/data',
-        'resourceIds': f"https://localhost:8081/api/offers/{offer_id}",
+        'recipient': 'https://connector:8081/api/ids/data',
+        'resourceIds': f"https://connector:8081/api/offers/{offer_id}",
         'artifactIds': artifact,
         'download': 'false'
     }
@@ -85,7 +85,7 @@ def contract_request(action, artifact, offer_id):
     return agreement_url
 
 def get_agreement(agreement_url):
-    #url = f'https://localhost:8081/api/agreements/{agreement_id}/artifacts'
+    #url = f'https://connector:8081/api/agreements/{agreement_id}/artifacts'
     url = agreement_url
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='

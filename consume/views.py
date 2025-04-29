@@ -8,7 +8,7 @@ def connector_offers(request):
     size = request.GET.get('size', '10')
     
     # Construct the URL with pagination parameters
-    url = f'https://localhost:8081/api/offers?page={page}&size={size}'
+    url = f'https://connector:8081/api/offers?page={page}&size={size}'
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
@@ -65,7 +65,7 @@ def selected_offer(request, offer_id):
     return render(request, 'consume/selected_offer.html', {'offer': offer, 'offer_id': offer_id})
 
 def consume_offer(request, offer_id):
-    offer_url = f"https://localhost:8081/api/offers/{offer_id}"
+    offer_url = f"https://connector:8081/api/offers/{offer_id}"
     artifact_url = runner(offer_url) 
     print('Artifact URL:', artifact_url)
     return render(request, 'consume/consume_offer.html',{'artifact_url': artifact_url})
