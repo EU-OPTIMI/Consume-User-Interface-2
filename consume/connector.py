@@ -5,12 +5,12 @@ import re
 from requests.auth import HTTPBasicAuth
 
 def get_selected_offer(offer_id):
-    url = f'https://ds2provider.collab-cloud.eu:8081/api/offers/{offer_id}'
+    url = f'https://localhost:8081/api/offers/{offer_id}'
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
     
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, verify=False)
     offer = response.json()
     # Render the offer detail template with offer data
     return offer
@@ -26,26 +26,26 @@ def get_selected_offers_catalog_url(offer):
     }
 
     # Send the GET request
-    response = requests.get(catalog_url, headers=headers)
+    print("catalog_url", catalog_url)
+    response = requests.get(catalog_url, headers=headers, verify=False)
     response_json = response.json()
     catalog_url = response_json["_embedded"]["catalogs"][0]["_links"]["self"]["href"]
     return catalog_url
 
 def description_request(offer, catalog_url):
     print("catalog_urlcatalog_url", catalog_url)
-    url = 'https://ds2consumer.collab-cloud.eu:8081/api/ids/description'
+    url = 'https://localhost:8081/api/ids/description'
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
     params = {
-        'recipient': 'https://ds2provider.collab-cloud.eu:8081/api/ids/data',
+        'recipient': 'https://localhost:8081/api/ids/data',
         'elementId': catalog_url
     }
     
-    # Perform the POST request
-    response = requests.post(url, headers=headers, params=params)
+    response = requests.post(url, headers=headers, params=params, verify=False)
     response_json = response.json()
-    #print("RRRRRR", response_json)
+    print('DESCRIPTION REQUEST RESPONSE:', response_json)
     action = response_json['ids:offeredResource'][0]['ids:contractOffer'][0]['ids:permission'][0]['ids:action'][0]['@id']
     artifact =response_json['ids:offeredResource'][0]['ids:representation'][0]['ids:instance'][0]['@id']
     return action, artifact
@@ -53,14 +53,14 @@ def description_request(offer, catalog_url):
     
 
 def contract_request(action, artifact, offer_id):
-    url = 'https://ds2consumer.collab-cloud.eu:8081/api/ids/contract'
+    url = 'https://localhost:8081/api/ids/contract'
     headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
     params = {
-        'recipient': 'https://ds2provider.collab-cloud.eu:8081/api/ids/data',
-        'resourceIds': f"https://ds2provider.collab-cloud.eu:8081/api/offers/{offer_id}",
+        'recipient': 'https://localhost:8081/api/ids/data',
+        'resourceIds': f"https://localhost:8081/api/offers/{offer_id}",
         'artifactIds': artifact,
         'download': 'false'
     }
@@ -76,7 +76,7 @@ def contract_request(action, artifact, offer_id):
         }
     ]
 
-    response = requests.post(url, headers=headers, params=params, data=json.dumps(payload))
+    response = requests.post(url, headers=headers, params=params, data=json.dumps(payload), verify=False)
     response_json = response.json()
     print('--------------------------------------------------------------------------------------------')
     print('CONTRACT REQUEST RESPONSE:', response_json)
@@ -85,13 +85,13 @@ def contract_request(action, artifact, offer_id):
     return agreement_url
 
 def get_agreement(agreement_url):
-    #url = f'https://ds2consumer.collab-cloud.eu:8081/api/agreements/{agreement_id}/artifacts'
+    #url = f'https://localhost:8081/api/agreements/{agreement_id}/artifacts'
     url = agreement_url
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
 
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, verify=False)
     response_json = response.json()
     print('EEEASYagreement',response_json)
     artifact_url = response_json["_embedded"]["artifacts"][0]["_links"]["data"]["href"]
@@ -104,7 +104,7 @@ def get_data(artifact_url):
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
 
-    response = requests.get(artifact_url, headers=headers)
+    response = requests.get(artifact_url, headers=headers, verify=False)
     print('--------------------------------------------------------------')
     print('GEEEET DATA RESPONSE')
     print("Status Code:", response.status_code)
@@ -116,12 +116,17 @@ def get_data(artifact_url):
 
 def runner(offer_url):
     offer_id = offer_url.split('/')[-1]
+    print('OFFER ID', offer_id)
     offer = get_selected_offer(offer_id)
+    print('OFFER', offer)
     catalog_url = get_selected_offers_catalog_url(offer)
+    print('CATALOG URL', catalog_url)
     action, artifact = description_request(offer, catalog_url)
+    print('ACTION', action)
     agreement_url = contract_request(action, artifact, offer_id)
+    print('AGREEMENT URL', agreement_url)
     artifact_url = get_agreement(agreement_url)
-    print('WHATIS IN ARTIFACTURL', artifact_url)
+    print('ARTIFACT URL', artifact_url)
     response = get_data(artifact_url)
 
     return artifact_url

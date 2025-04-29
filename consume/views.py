@@ -4,16 +4,16 @@ from django.shortcuts import render
 from .connector import get_selected_offer, runner
 
 def connector_offers(request):
-    page = request.GET.get('page', '1')
+    page = request.GET.get('page', '0')
     size = request.GET.get('size', '10')
     
     # Construct the URL with pagination parameters
-    url = f'https://ds2provider.collab-cloud.eu:8081/api/offers?page={page}&size={size}'
+    url = f'https://localhost:8081/api/offers?page={page}&size={size}'
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
     
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, verify=False)
     print("response: ", response)
 
 
@@ -65,6 +65,7 @@ def selected_offer(request, offer_id):
     return render(request, 'consume/selected_offer.html', {'offer': offer, 'offer_id': offer_id})
 
 def consume_offer(request, offer_id):
-    offer_url = f"https://ds2provider.collab-cloud.eu:8081/api/offers/{offer_id}"
+    offer_url = f"https://localhost:8081/api/offers/{offer_id}"
     artifact_url = runner(offer_url) 
+    print('Artifact URL:', artifact_url)
     return render(request, 'consume/consume_offer.html',{'artifact_url': artifact_url})
