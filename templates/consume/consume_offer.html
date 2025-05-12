@@ -50,11 +50,9 @@
 
     <div class="container">
         <div class="card">
-            <h1 class="card-title mb-4">Offer Negotiation Complete</h1>
-            <p class="card-text">The offer negotiation has been completed, and the contract has been successfully agreed upon.</p>
+            <h1 class="card-title mb-4">Offer Consumption</h1>
+            <p class="card-text">The offer has been successfully consumed. Here is the URL to access the data:</p>
             
-            <p class="card-text">Here is the URL to access the data:</p>
-
             <!-- URL Field with Open Icon -->
             <div class="input-group">
                 <input type="text" class="form-control" id="offerUrl" value="{{ artifact_url }}" readonly>
@@ -66,7 +64,7 @@
             </div>
 
             <!-- Back to Offers Button -->
-            <a class="btn btn-secondary" href="{% url 'connector_offers' %}">Back to Offers</a>
+            <a href="{% url 'consume_offer' offer.offer_url|urlencode %}" class="btn btn-success">Consume</a>
         </div>
     </div>
 

@@ -7,5 +7,3 @@ services:
       - .:/app
     ports:
       - "8103:8000"
-    env_file:
-      - /home/vmuser/REPOWER/Runner/.env
