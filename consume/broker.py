@@ -1,10 +1,11 @@
 import requests
 import urllib3
+from decouple import config
 urllib3.disable_warnings()       # only for dev!
 
-CONNECTOR_BASE = 'https://connector.collab-cloud.eu'
-BROKER        = 'https://broker.collab-cloud.eu/broker/infrastructure/'
-AUTHORIZATION = 'Basic YWRtaW46cGFzc3dvcmQ='  # …or Bearer eyJ…
+CONNECTOR_BASE = config('CONNECTOR_BASE')
+BROKER = config('BROKER')
+AUTHORIZATION = config('AUTHORIZATION')
 
 def get_all_connectors():
     """

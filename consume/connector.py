@@ -1,11 +1,14 @@
 import requests
 import json
 import re
+from decouple import config
 
 from requests.auth import HTTPBasicAuth
 
+BASE_URL = config('BASE_URL')
+
 def get_selected_offer(offer_id):
-    url = f'https://sandbox3.collab-cloud.eu/api/offers/{offer_id}'
+    url = f'{BASE_URL}api/offers/{offer_id}'
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
@@ -34,12 +37,12 @@ def get_selected_offers_catalog_url(offer):
 
 def description_request(offer, catalog_url):
     print("catalog_urlcatalog_url", catalog_url)
-    url = 'https://sandbox3.collab-cloud.eu/api/ids/description'
+    url = f'{BASE_URL}api/ids/description'
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
     params = {
-        'recipient': 'https://sandbox3.collab-cloud.eu/api/ids/data',
+        'recipient': f'{BASE_URL}api/ids/data',
         'elementId': catalog_url
     }
     
@@ -53,14 +56,14 @@ def description_request(offer, catalog_url):
     
 
 def contract_request(action, artifact, offer_id):
-    url = 'https://sandbox3.collab-cloud.eu/api/ids/contract'
+    url = f'{BASE_URL}api/ids/contract'
     headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
     params = {
-        'recipient': 'https://sandbox3.collab-cloud.eu/api/ids/data',
-        'resourceIds': f"https://sandbox3.collab-cloud.eu/api/offers/{offer_id}",
+        'recipient': f'{BASE_URL}api/ids/data',
+        'resourceIds': f"{BASE_URL}api/offers/{offer_id}",
         'artifactIds': artifact,
         'download': 'false'
     }
@@ -85,7 +88,7 @@ def contract_request(action, artifact, offer_id):
     return agreement_url
 
 def get_agreement(agreement_url):
-    #url = f'https://localhost:8081/api/agreements/{agreement_id}/artifacts'
+    #url = f'{BASE_URL}api/agreements/{agreement_id}/artifacts'
     url = agreement_url
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='

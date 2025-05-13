@@ -4,8 +4,12 @@ from django.shortcuts import render
 from .connector import get_selected_offer, runner
 from .broker import get_all_connectors
 from urllib.parse import unquote
+from decouple import config
     
-AUTHORIZATION = "Basic YWRtaW46cGFzc3dvcmQ="
+AUTHORIZATION = config('AUTHORIZATION')
+BASE_URL = config('BASE_URL')
+
+
 def connector_offers(request):
     # Fetch connectors from the broker
     connectors_data = get_all_connectors()
@@ -66,7 +70,7 @@ def connector_offers(request):
 def selected_offer(request, offer_id):
     try:
         offer = get_selected_offer(offer_id)
-        offer['offer_url'] = f'https://sandbox3.collab-cloud.eu/api/offers/{offer_id}'
+        offer['offer_url'] = f'{BASE_URL}api/offers/{offer_id}'
         offer['offer_id'] = offer_id  # <-- Add this
     except requests.exceptions.RequestException as e:
         print(f"Error fetching selected offer: {e}")
@@ -76,7 +80,7 @@ def selected_offer(request, offer_id):
 
 
 def get_selected_offer(offer_id):
-    url = f'https://sandbox3.collab-cloud.eu/api/offers/{offer_id}'
+    url = f'{BASE_URL}api/offers/{offer_id}'
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
@@ -89,7 +93,7 @@ def get_selected_offer(offer_id):
 
 def consume_offer(request, offer_id):
     offer_id = unquote(offer_id)
-    offer_url = f"https://sandbox3.collab-cloud.eu/api/offers/{offer_id}"
+    offer_url = f"{BASE_URL}api/offers/{offer_id}"
     
     artifact_url = runner(offer_url)
     print('Artifact URL:', artifact_url)
