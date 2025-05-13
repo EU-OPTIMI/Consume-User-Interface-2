@@ -3,6 +3,7 @@ import json
 from django.shortcuts import render
 from .connector import get_selected_offer, runner
 from .broker import get_all_connectors
+from urllib.parse import unquote
     
 AUTHORIZATION = "Basic YWRtaW46cGFzc3dvcmQ="
 def connector_offers(request):
@@ -63,17 +64,16 @@ def connector_offers(request):
     return render(request, 'consume/connector_offers.html', {'offers': offers})
 
 def selected_offer(request, offer_id):
-    # Fetch the offer details using the offer_id
     try:
         offer = get_selected_offer(offer_id)
-        # Add the offer URL to the offer object
         offer['offer_url'] = f'https://sandbox3.collab-cloud.eu/api/offers/{offer_id}'
+        offer['offer_id'] = offer_id  # <-- Add this
     except requests.exceptions.RequestException as e:
         print(f"Error fetching selected offer: {e}")
         return render(request, 'consume/error.html', {'error': 'Failed to fetch the selected offer.'})
-    
-    # Render the selected offer template
+
     return render(request, 'consume/selected_offer.html', {'offer': offer, 'offer_id': offer_id})
+
 
 def get_selected_offer(offer_id):
     url = f'https://sandbox3.collab-cloud.eu/api/offers/{offer_id}'
@@ -85,15 +85,13 @@ def get_selected_offer(offer_id):
     response.raise_for_status()  # Raise an error if the request fails
     return response.json()
 
-from urllib.parse import unquote
+
 
 def consume_offer(request, offer_id):
-    # Decode the offer_id if it's URL-encoded
-    offer_url = unquote(offer_id)
+    offer_id = unquote(offer_id)
+    offer_url = f"https://sandbox3.collab-cloud.eu/api/offers/{offer_id}"
     
-    # Pass the offer_url to the runner function
     artifact_url = runner(offer_url)
     print('Artifact URL:', artifact_url)
     
-    # Render the consume_offer template with the artifact URL
     return render(request, 'consume/consume_offer.html', {'artifact_url': artifact_url})

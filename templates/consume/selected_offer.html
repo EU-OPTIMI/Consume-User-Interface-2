@@ -70,7 +70,7 @@
         </div>
 
         <div class="btn-container mt-4">
-            <a href="{% url 'consume_offer' offer.offer_url|urlencode %}" class="btn btn-success">Consume</a>
+            <a href="{% url 'consume_offer' offer.offer_id %}" class="btn btn-success">Consume</a>
             <a class="btn btn-secondary" href="{% url 'connector_offers' %}">Back to Offers</a>
         </div>
     </div>
