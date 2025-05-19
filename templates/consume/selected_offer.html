@@ -10,22 +10,12 @@
             background-color: #f4f7fa;
             font-family: 'Helvetica Neue', Arial, sans-serif;
         }
-        /* Main container */
         .container {
             margin-top: 50px;
             margin-bottom: 50px;
         }
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 500;
-            color: #333;
-            margin-bottom: 40px;
-            text-align: center;
-        }
-        /* Card Design */
         .card {
             border-radius: 0.75rem;
-            border: none;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             background-color: #fff;
         }
@@ -42,11 +32,6 @@
             font-size: 1rem;
             margin-bottom: 15px;
         }
-        .card-text strong {
-            font-weight: 600;
-            color: #495057;
-        }
-        /* Button Design */
         .btn {
             font-size: 1rem;
             padding: 10px 20px;
@@ -68,16 +53,9 @@
             background-color: #5a6268;
             border-color: #545b62;
         }
-        /* Footer button container */
-        .btn-container {
-            margin-top: 40px;
-            text-align: center;
-        }
     </style>
 </head>
 <body>
-
-    <!-- Main Content -->
     <div class="container">
         <h1>Offer Details</h1>
         <div class="card shadow-sm">
@@ -88,27 +66,13 @@
                 <p class="card-text"><strong>Modification Date:</strong> {{ offer.modificationDate }}</p>
                 <p class="card-text"><strong>Keywords:</strong> {{ offer.keywords|join:", " }}</p>
                 <p class="card-text"><strong>Publisher:</strong> {{ offer.publisher }}</p>
-                <p class="card-text"><strong>Language:</strong> {{ offer.language }}</p>
-                <p class="card-text"><strong>License:</strong> {{ offer.license }}</p>
-                <p class="card-text"><strong>Version:</strong> {{ offer.version }}</p>
-                <!--p class="card-text"><strong>Sovereign:</strong> {{ offer.sovereign }}</p-->
-                <!--p class="card-text"><strong>Endpoint Documentation:</strong> {{ offer.endpointDocumentation }}</p-->
-                <!--p class="card-text"><strong>Payment Modality:</strong> {{ offer.paymentModality }}</p-->
-                <!--p class="card-text"><strong>Additional Information:</strong> {{ offer.additional }}</p-->
-                <!--p class="card-text"><strong>Samples:</strong> {{ offer.samples|join:", " }}</p-->
             </div>
         </div>
 
-        <!-- Buttons for actions -->
-        <div class="btn-container">
-            <a class="btn btn-primary" href="{% url 'consume_offer' offer_id %}">Consume</a>
+        <div class="btn-container mt-4">
+            <a href="{% url 'consume_offer' offer.offer_id %}" class="btn btn-success">Consume</a>
             <a class="btn btn-secondary" href="{% url 'connector_offers' %}">Back to Offers</a>
-            
         </div>
     </div>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>

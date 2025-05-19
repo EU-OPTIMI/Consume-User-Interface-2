@@ -1,11 +1,14 @@
 import requests
 import json
 import re
+from decouple import config
 
 from requests.auth import HTTPBasicAuth
 
+BASE_URL = config('BASE_URL')
+
 def get_selected_offer(offer_id):
-    url = f'https://connectorb:8081/api/offers/{offer_id}'
+    url = f'{BASE_URL}api/offers/{offer_id}'
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
@@ -34,12 +37,12 @@ def get_selected_offers_catalog_url(offer):
 
 def description_request(offer, catalog_url):
     print("catalog_urlcatalog_url", catalog_url)
-    url = 'https://connectorb:8081/api/ids/description'
+    url = f'{BASE_URL}api/ids/description'
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
     params = {
-        'recipient': 'https://connectorb:8081/api/ids/data',
+        'recipient': f'{BASE_URL}api/ids/data',
         'elementId': catalog_url
     }
     
@@ -53,14 +56,14 @@ def description_request(offer, catalog_url):
     
 
 def contract_request(action, artifact, offer_id):
-    url = 'https://connectorb:8081/api/ids/contract'
+    url = f'{BASE_URL}api/ids/contract'
     headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
     params = {
-        'recipient': 'https://connectorb:8081/api/ids/data',
-        'resourceIds': f"https://connectorb:8081/api/offers/{offer_id}",
+        'recipient': f'{BASE_URL}api/ids/data',
+        'resourceIds': f"{BASE_URL}api/offers/{offer_id}",
         'artifactIds': artifact,
         'download': 'false'
     }
@@ -85,7 +88,7 @@ def contract_request(action, artifact, offer_id):
     return agreement_url
 
 def get_agreement(agreement_url):
-    #url = f'https://connectorb:8081/api/agreements/{agreement_id}/artifacts'
+    #url = f'{BASE_URL}api/agreements/{agreement_id}/artifacts'
     url = agreement_url
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
@@ -116,19 +119,29 @@ def get_data(artifact_url):
 
 def runner(offer_url):
     offer_id = offer_url.split('/')[-1]
-    print('OFFER ID', offer_id)
-    offer = get_selected_offer(offer_id)
-    print('OFFER', offer)
-    catalog_url = get_selected_offers_catalog_url(offer)
-    print('CATALOG URL', catalog_url)
-    action, artifact = description_request(offer, catalog_url)
-    print('ACTION', action)
-    agreement_url = contract_request(action, artifact, offer_id)
-    print('AGREEMENT URL', agreement_url)
-    artifact_url = get_agreement(agreement_url)
-    print('ARTIFACT URL', artifact_url)
-    response = get_data(artifact_url)
-
-    return artifact_url
-
+    print('OFFER ID:', offer_id)
     
+    # Fetch the offer details
+    offer = get_selected_offer(offer_id)
+    print('OFFER:', offer)
+    
+    # Get the catalog URL associated with the offer
+    catalog_url = get_selected_offers_catalog_url(offer)
+    print('CATALOG URL:', catalog_url)
+    
+    # Perform the description request
+    action, artifact = description_request(offer, catalog_url)
+    print('ACTION:', action)
+    
+    # Perform the contract request
+    agreement_url = contract_request(action, artifact, offer_id)
+    print('AGREEMENT URL:', agreement_url)
+    
+    # Get the artifact URL
+    artifact_url = get_agreement(agreement_url)
+    print('ARTIFACT URL:', artifact_url)
+    
+    # Optionally fetch the data (if needed)
+    response = get_data(artifact_url)
+    
+    return artifact_url
