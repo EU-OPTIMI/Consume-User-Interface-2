@@ -28,6 +28,9 @@ DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
 # ALLOWED_HOSTS from environment variable
 ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='*').split(',')
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://digi4live.collab-cloud.eu"
+]
 
 # Application definition
 
