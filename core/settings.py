@@ -26,16 +26,8 @@ SECRET_KEY = config('DJANGO_SECRET_KEY', default='django-insecure-(pm(cs6d7%x$=9
 DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
 
 # ALLOWED_HOSTS from environment variable
-ALLOWED_HOSTS = [
-    "digi4live.collab-cloud.eu",
-    "127.0.0.1",
-    "localhost"
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://digi4live.collab-cloud.eu"
-]
-
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='').split(',')
 # Application definition
 
 INSTALLED_APPS = [
