@@ -115,6 +115,7 @@ def consume_offer(request, offer_id):
 def dataspace_connectors(request):
     data = get_all_connectors()
     connectors = data.get("@graph", [])
+    print('COOOONECTORS', connectors)
 
     # Change catalogs from list to dict: connector_id -> base_url
     catalogs = {}
@@ -123,8 +124,11 @@ def dataspace_connectors(request):
         rc = connector.get("resourceCatalog")
         connector_id = connector.get("@id")
 
+        
         if rc and connector_id:
-            parts = rc.rstrip('/').split('/')
+            # Use first item if rc is a list, or rc directly if it's a string
+            rc_url = rc if isinstance(rc, str) else rc[0]
+            parts = rc_url.rstrip('/').split('/')
             url_without_uuid = '/'.join(parts[:-1]) + '/'
             catalogs[connector_id] = url_without_uuid
 
