@@ -126,6 +126,7 @@ def dataspace_connectors(request):
     for connector in connectors:
         print('CONNECTOR', connector)
         rc = connector.get("resourceCatalog")
+        print('RESOURCE CATALOG', rc)
         connector_id = connector.get("@id")
         if rc and connector_id:
             # Use first item if rc is a list, or rc directly if it's a string
