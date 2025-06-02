@@ -17,10 +17,9 @@ def get_all_connectors():
     url = f"{CONNECTOR_BASE}/api/ids/query"
     headers = {
         'Authorization': AUTHORIZATION,
-        'Content-Type':  'application/octet-stream',
+        'Content-Type': 'application/octet-stream',
     }
 
-    # triple-quoted string preserves line breaks exactly
     sparql = """\
 PREFIX ids:   <https://w3id.org/idsa/core/>
 PREFIX idsc:  <https://w3id.org/idsa/code/>
@@ -58,6 +57,8 @@ WHERE {
             verify=False
         )
         resp.raise_for_status()
+        print("Response status code:", resp.status_code)
+        print("Full response:", resp.text)  # Log the full response for debugging
         return resp.json()
     except requests.exceptions.RequestException as e:
         print("Error fetching connectors:", e)
