@@ -111,20 +111,22 @@ def consume_offer(request, offer_id):
     return render(request, 'consume/consume_offer.html', {'artifact_url': artifact_url})
 
 
-
 def dataspace_connectors(request):
     data = get_all_connectors()
-    connectors = data.get("@graph", [])
-    print('COOOONECTORS', connectors)
 
-    # Change catalogs from list to dict: connector_id -> base_url
+    # Normalize data to a list
+    if isinstance(data, dict) and "@graph" in data:
+        connectors = data["@graph"]
+    elif isinstance(data, dict):
+        connectors = [data]
+    else:
+        connectors = data
+
     catalogs = {}
-
     for connector in connectors:
+        print('CONNECTOR', connector)
         rc = connector.get("resourceCatalog")
         connector_id = connector.get("@id")
-
-        
         if rc and connector_id:
             # Use first item if rc is a list, or rc directly if it's a string
             rc_url = rc if isinstance(rc, str) else rc[0]
@@ -189,5 +191,3 @@ def dataspace_connectors(request):
             print(f"Request error for {offer_info['url']}: {e}")
 
     return render(request, 'consume/connector_offers.html', {'offers': offers})
-
- 
