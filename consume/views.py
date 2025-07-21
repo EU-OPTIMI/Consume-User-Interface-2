@@ -94,7 +94,7 @@ def get_selected_offer(offer_id):
     headers = {
         'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
     }
-    
+    print('URL', url)
     response = requests.get(url, headers=headers, verify=False)
     response.raise_for_status()  # Raise an error if the request fails
     return response.json()
@@ -133,24 +133,40 @@ def dataspace_connectors(request):
             rc_url = rc if isinstance(rc, str) else rc[0]
             parts = rc_url.rstrip('/').split('/')
             url_without_uuid = '/'.join(parts[:-1]) + '/'
+            print('URL WITHOUT UUID', url_without_uuid)
             catalogs[connector_id] = url_without_uuid
 
     offers_url_list = []
     offers = []
 
+    offers_url_list = []
+    offers = []
+    
+    print('CATALOGS', catalogs)
     for connector_id, url in catalogs.items():
+        print('CONNECTOR ID', connector_id)
         try:
+            if '/connector/' not in url:
+                print('URL BEFORE', url)
+                url = url.replace('/api/catalogs/', '/connector/api/catalogs/')
+                print('URL AFTER', url)
+                
             response = requests.get(
                 url,
                 headers={'Authorization': AUTHORIZATION},
                 verify=False
             )
+            print('RESPONSE', response)
             if response.status_code == 200:
                 catalog_data = response.json()
                 for catalog in catalog_data.get("_embedded", {}).get("catalogs", []):
                     offers_link = catalog.get("_links", {}).get("offers", {}).get("href")
                     if offers_link:
                         clean_url = offers_link.split('{')[0]
+                        if '/connector/' not in clean_url:
+                            print('AGAIN URL BEFORE', clean_url)
+                            clean_url = clean_url.replace('/api/catalogs/', '/connector/api/catalogs/')
+                            print('AGAIN URL AFTER', clean_url)
                         offers_url_list.append({
                             'url': clean_url,
                             'connector_id': connector_id,
@@ -163,6 +179,7 @@ def dataspace_connectors(request):
             print(f"Request error for {url}: {e}")
 
     for offer_info in offers_url_list:
+        print('OFFER INFO', offer_info)
         try:
             response = requests.get(
                 offer_info['url'],
