@@ -1,19 +1,24 @@
-# views.py
+# consume/views.py
 
 import requests
-from urllib.parse import urljoin
+from urllib.parse import urljoin, unquote
 from decouple import config
 from django.shortcuts import render
-from .broker import get_all_connectors
-from urllib.parse import unquote
 from .connector import runner
+from .broker import get_all_connectors
 
+# Configuration from .env
 AUTHORIZATION = config('AUTHORIZATION')
+BASE_URL      = config('BASE_URL')
 PAGE_SIZE     = 30
 AUTH_HEADERS  = {'Authorization': AUTHORIZATION}
-BASE_URL = config('BASE_URL')
+
 
 def _fetch_all_pages(base_url, embedded_key):
+    """
+    Fetches every page of an IDS‐style paged endpoint,
+    accumulating all entries under `_embedded[embedded_key]`.
+    """
     items = []
     page = 0
 
@@ -30,21 +35,29 @@ def _fetch_all_pages(base_url, embedded_key):
         items.extend(batch)
 
         pg = payload.get('page', {})
-        # if we've reached last page, stop
+        # stop when we've reached the last page
         if pg.get('number', 0) >= pg.get('totalPages', 1) - 1:
             break
+
         page += 1
 
     return items
 
 
 def dataspace_connectors(request):
-    # 1) Fetch raw connector info
+    """
+    List all offers from all connectors:
+    - Normalize broker response into a list of connectors
+    - For each connector, iterate all catalogs
+    - For each catalog, iterate all offers
+    """
     raw = get_all_connectors()
     if isinstance(raw, dict) and raw.get('error'):
-        return render(request, 'consume/error.html', {'error': raw['error']})
+        return render(request, 'consume/error.html', {
+            'error': raw['error']
+        })
 
-    # 2) Normalize to a list of connector dicts
+    # Normalize into a list of connector dicts
     if isinstance(raw, dict) and '@graph' in raw:
         connectors = raw['@graph']
     elif isinstance(raw, dict):
@@ -56,11 +69,10 @@ def dataspace_connectors(request):
 
     offers = []
 
-    # 3) Walk every connector
     for conn in connectors:
         connector_id = conn.get('@id')
 
-        # collect all sameAs endpoints (or fallback)
+        # Gather all sameAs endpoints (or fallback)
         endpoints = conn.get('sameAs') or []
         if isinstance(endpoints, str):
             endpoints = [endpoints]
@@ -70,28 +82,25 @@ def dataspace_connectors(request):
         for ep in endpoints:
             ep = ep.rstrip('/')
             catalogs_url = f"{ep}/api/catalogs"
-            # 4) Fetch every catalog
             catalogs = _fetch_all_pages(catalogs_url, 'catalogs')
 
             for cat in catalogs:
                 title = cat.get('title')
                 desc  = cat.get('description')
 
-                # build the offers URL
+                # Build and possibly rewrite the offers URL
                 offers_href = (
                     cat.get('_links', {})
                        .get('offers', {})
                        .get('href', '')
                        .split('{')[0]
                 )
-                # ensure we’re going through the connector proxy if needed
                 if '/connector/' not in offers_href and '/api/catalogs/' in offers_href:
                     offers_href = offers_href.replace(
                         '/api/catalogs/',
                         '/connector/api/catalogs/'
                     )
 
-                # 5) Fetch every offer in that catalog
                 resources = _fetch_all_pages(offers_href, 'resources')
                 for off in resources:
                     self_href = (
@@ -100,6 +109,7 @@ def dataspace_connectors(request):
                            .get('href', '')
                     )
                     offer_id = self_href.rstrip('/').split('/')[-1]
+
                     offers.append({
                         'connector_id':        connector_id,
                         'catalog_title':       title,
@@ -111,11 +121,11 @@ def dataspace_connectors(request):
                         'offer_url':           self_href,
                         'offer_id':            offer_id,
                     })
-                    print("offer_id", offer_id)
 
     return render(request, 'consume/connector_offers.html', {
         'offers': offers
     })
+
 
 def selected_offer(request, offer_id):
     """
@@ -126,7 +136,6 @@ def selected_offer(request, offer_id):
         resp = requests.get(url, headers=AUTH_HEADERS, verify=False)
         resp.raise_for_status()
         offer = resp.json()
-        # augment for your template
         offer['offer_url'] = url
         offer['offer_id']  = offer_id
     except requests.exceptions.RequestException as e:
@@ -142,10 +151,8 @@ def selected_offer(request, offer_id):
 
 def consume_offer(request, offer_id):
     """
-    Given an offer ID, run your runner() to kick off the consumption
-    and render the resulting artifact URL.
+    Given an offer ID, invoke runner() to consume it and render the artifact URL.
     """
-    # in case the ID is URL‐encoded
     raw_id = unquote(offer_id)
     offer_url = f"{BASE_URL.rstrip('/')}/api/offers/{raw_id}"
 
