@@ -1,194 +1,161 @@
+# views.py
+
 import requests
-import json
+from urllib.parse import urljoin
+from decouple import config
 from django.shortcuts import render
-from .connector import get_selected_offer, runner
 from .broker import get_all_connectors
 from urllib.parse import unquote
-from decouple import config
-from django.http import JsonResponse
+from .connector import runner
 
-    
 AUTHORIZATION = config('AUTHORIZATION')
+PAGE_SIZE     = 30
+AUTH_HEADERS  = {'Authorization': AUTHORIZATION}
 BASE_URL = config('BASE_URL')
 
+def _fetch_all_pages(base_url, embedded_key):
+    items = []
+    page = 0
 
-def connector_offers(request):
-    # Fetch connectors from the broker
-    connectors_data = get_all_connectors()
-    print('OOOOO', connectors_data)
-    # Check if there was an error
-    if "error" in connectors_data:
-        return render(request, 'consume/error.html', {'error': connectors_data['error']})
-    
-    # Extract connectors and their catalogs
-    offers = []
-    for connector in connectors_data.get('@graph', []):
-        print('CONNECTOR', connector)
-        connector_id = connector.get('@id')
-        catalogs = connector.get('resourceCatalog', [])
-        print('CCCAATALOG######', catalogs)
-        if isinstance(catalogs, str):
-            catalogs = [catalogs]
-            print('MMMM',catalogs)
-        
-        for catalog_url in catalogs:
-            print('AAAAAAAAAA', catalog_url)
-            # Fetch catalog details
-            try:
-                catalog_response = requests.get(
-                    catalog_url,
-                    headers={'Authorization': AUTHORIZATION},
-                    verify=False
-                )
-                
-                catalog_response.raise_for_status()
-                catalog_data = catalog_response.json()
-                
-                # Fetch offers for the catalog
-                offers_url = catalog_data['_links']['offers']['href'].split('{')[0]  # Remove templated part
-                
-                offers_response = requests.get(
-                    offers_url,
-                    headers={'Authorization': AUTHORIZATION},
-                    verify=False
-                )
-                offers_response.raise_for_status()
-                offers_data = offers_response.json()
-                
-                # Extract offer details
-                for offer in offers_data.get('_embedded', {}).get('resources', []):
-                    offer_url = offer['_links']['self']['href']
-                    offer_id = offer_url.split('/')[-1]
-                    
-                    offers.append({
-                        'connector_id': connector_id,
-                        'catalog_title': catalog_data.get('title'),
-                        'catalog_description': catalog_data.get('description'),
-                        'offer_title': offer.get('title'),
-                        'offer_description': offer.get('description'),
-                        'offer_keywords': offer.get('keywords', []),
-                        'offer_publisher': offer.get('publisher'),
-                        'offer_url': offer_url,
-                        'offer_id': offer_id
-                    })
-            except requests.exceptions.RequestException as e:
-                print(f"Error fetching catalog or offers: {e}")
-    
-    # Render the updated template
-    return render(request, 'consume/connector_offers.html', {'offers': offers})
+    while True:
+        resp = requests.get(
+            f"{base_url.rstrip('/')}?page={page}&size={PAGE_SIZE}",
+            headers=AUTH_HEADERS,
+            verify=False
+        )
+        resp.raise_for_status()
+        payload = resp.json()
 
-def selected_offer(request, offer_id):
-    try:
-        offer = get_selected_offer(offer_id)
-        offer['offer_url'] = f'{BASE_URL}api/offers/{offer_id}'
-        offer['offer_id'] = offer_id  # <-- Add this
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching selected offer: {e}")
-        return render(request, 'consume/error.html', {'error': 'Failed to fetch the selected offer.'})
+        batch = payload.get('_embedded', {}).get(embedded_key, [])
+        items.extend(batch)
 
-    return render(request, 'consume/selected_offer.html', {'offer': offer, 'offer_id': offer_id})
+        pg = payload.get('page', {})
+        # if we've reached last page, stop
+        if pg.get('number', 0) >= pg.get('totalPages', 1) - 1:
+            break
+        page += 1
 
-
-def get_selected_offer(offer_id):
-    url = f'{BASE_URL}api/offers/{offer_id}'
-    headers = {
-        'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ='
-    }
-    
-    response = requests.get(url, headers=headers, verify=False)
-    response.raise_for_status()  # Raise an error if the request fails
-    return response.json()
-
-
-
-def consume_offer(request, offer_id):
-    offer_id = unquote(offer_id)
-    offer_url = f"{BASE_URL}api/offers/{offer_id}"
-    
-    artifact_url = runner(offer_url)
-    print('Artifact URL:', artifact_url)
-    
-    return render(request, 'consume/consume_offer.html', {'artifact_url': artifact_url})
+    return items
 
 
 def dataspace_connectors(request):
-    data = get_all_connectors()
+    # 1) Fetch raw connector info
+    raw = get_all_connectors()
+    if isinstance(raw, dict) and raw.get('error'):
+        return render(request, 'consume/error.html', {'error': raw['error']})
 
-    # Normalize data to a list
-    if isinstance(data, dict) and "@graph" in data:
-        connectors = data["@graph"]
-    elif isinstance(data, dict):
-        connectors = [data]
+    # 2) Normalize to a list of connector dicts
+    if isinstance(raw, dict) and '@graph' in raw:
+        connectors = raw['@graph']
+    elif isinstance(raw, dict):
+        connectors = [raw]
+    elif isinstance(raw, list):
+        connectors = raw
     else:
-        connectors = data
+        connectors = []
 
-    catalogs = {}
-    for connector in connectors:
-        print('CONNECTOR', connector)
-        rc = connector.get("resourceCatalog")
-        print('RESOURCE CATALOG', rc)
-        connector_id = connector.get("@id")
-        if rc and connector_id:
-            # Use first item if rc is a list, or rc directly if it's a string
-            rc_url = rc if isinstance(rc, str) else rc[0]
-            parts = rc_url.rstrip('/').split('/')
-            url_without_uuid = '/'.join(parts[:-1]) + '/'
-            catalogs[connector_id] = url_without_uuid
-
-    offers_url_list = []
     offers = []
 
-    for connector_id, url in catalogs.items():
-        try:
-            response = requests.get(
-                url,
-                headers={'Authorization': AUTHORIZATION},
-                verify=False
-            )
-            if response.status_code == 200:
-                catalog_data = response.json()
-                for catalog in catalog_data.get("_embedded", {}).get("catalogs", []):
-                    offers_link = catalog.get("_links", {}).get("offers", {}).get("href")
-                    if offers_link:
-                        clean_url = offers_link.split('{')[0]
-                        offers_url_list.append({
-                            'url': clean_url,
-                            'connector_id': connector_id,
-                            'catalog_title': catalog.get('title'),
-                            'catalog_description': catalog.get('description')
-                        })
-            else:
-                print(f"Failed to fetch from {url}, status code: {response.status_code}")
-        except requests.RequestException as e:
-            print(f"Request error for {url}: {e}")
+    # 3) Walk every connector
+    for conn in connectors:
+        connector_id = conn.get('@id')
 
-    for offer_info in offers_url_list:
-        try:
-            response = requests.get(
-                offer_info['url'],
-                headers={'Authorization': AUTHORIZATION},
-                verify=False
-            )
-            if response.status_code == 200:
-                offers_data = response.json()
-                for offer in offers_data.get('_embedded', {}).get('resources', []):
-                    offer_url = offer['_links']['self']['href']
-                    offer_id = offer_url.split('/')[-1]
+        # collect all sameAs endpoints (or fallback)
+        endpoints = conn.get('sameAs') or []
+        if isinstance(endpoints, str):
+            endpoints = [endpoints]
+        if not endpoints:
+            endpoints = [urljoin(connector_id, 'api/catalogs')]
 
+        for ep in endpoints:
+            ep = ep.rstrip('/')
+            catalogs_url = f"{ep}/api/catalogs"
+            # 4) Fetch every catalog
+            catalogs = _fetch_all_pages(catalogs_url, 'catalogs')
+
+            for cat in catalogs:
+                title = cat.get('title')
+                desc  = cat.get('description')
+
+                # build the offers URL
+                offers_href = (
+                    cat.get('_links', {})
+                       .get('offers', {})
+                       .get('href', '')
+                       .split('{')[0]
+                )
+                # ensure we’re going through the connector proxy if needed
+                if '/connector/' not in offers_href and '/api/catalogs/' in offers_href:
+                    offers_href = offers_href.replace(
+                        '/api/catalogs/',
+                        '/connector/api/catalogs/'
+                    )
+
+                # 5) Fetch every offer in that catalog
+                resources = _fetch_all_pages(offers_href, 'resources')
+                for off in resources:
+                    self_href = (
+                        off.get('_links', {})
+                           .get('self', {})
+                           .get('href', '')
+                    )
+                    offer_id = self_href.rstrip('/').split('/')[-1]
                     offers.append({
-                        'connector_id': offer_info['connector_id'],
-                        'catalog_title': offer_info['catalog_title'],
-                        'catalog_description': offer_info['catalog_description'],
-                        'offer_title': offer.get('title'),
-                        'offer_description': offer.get('description'),
-                        'offer_keywords': offer.get('keywords', []),
-                        'offer_publisher': offer.get('publisher'),
-                        'offer_url': offer_url,
-                        'offer_id': offer_id
+                        'connector_id':        connector_id,
+                        'catalog_title':       title,
+                        'catalog_description': desc,
+                        'offer_title':         off.get('title'),
+                        'offer_description':   off.get('description'),
+                        'offer_keywords':      off.get('keywords', []),
+                        'offer_publisher':     off.get('publisher'),
+                        'offer_url':           self_href,
+                        'offer_id':            offer_id,
                     })
-            else:
-                print(f"Failed to fetch offers from {offer_info['url']}, status code: {response.status_code}")
-        except requests.RequestException as e:
-            print(f"Request error for {offer_info['url']}: {e}")
+                    print("offer_id", offer_id)
 
-    return render(request, 'consume/connector_offers.html', {'offers': offers})
+    return render(request, 'consume/connector_offers.html', {
+        'offers': offers
+    })
+
+def selected_offer(request, offer_id):
+    """
+    Fetch the full details of one offer and render it.
+    """
+    try:
+        url = f"{BASE_URL.rstrip('/')}/api/offers/{offer_id}"
+        resp = requests.get(url, headers=AUTH_HEADERS, verify=False)
+        resp.raise_for_status()
+        offer = resp.json()
+        # augment for your template
+        offer['offer_url'] = url
+        offer['offer_id']  = offer_id
+    except requests.exceptions.RequestException as e:
+        return render(request, 'consume/error.html', {
+            'error': f"Failed to fetch offer {offer_id}: {e}"
+        })
+
+    return render(request, 'consume/selected_offer.html', {
+        'offer':    offer,
+        'offer_id': offer_id
+    })
+
+
+def consume_offer(request, offer_id):
+    """
+    Given an offer ID, run your runner() to kick off the consumption
+    and render the resulting artifact URL.
+    """
+    # in case the ID is URL‐encoded
+    raw_id = unquote(offer_id)
+    offer_url = f"{BASE_URL.rstrip('/')}/api/offers/{raw_id}"
+
+    try:
+        artifact_url = runner(offer_url)
+    except Exception as e:
+        return render(request, 'consume/error.html', {
+            'error': f"Failed to consume offer {raw_id}: {e}"
+        })
+
+    return render(request, 'consume/consume_offer.html', {
+        'artifact_url': artifact_url
+    })

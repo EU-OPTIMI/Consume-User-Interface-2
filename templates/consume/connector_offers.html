@@ -46,7 +46,7 @@
                                 <p><strong>Offer Description:</strong> {{ offer.offer_description }}</p>
                                 <p><strong>Keywords:</strong> <span class="keywords">{{ offer.offer_keywords|join:", " }}</span></p>
                                 <p><strong>Publisher:</strong> <a href="{{ offer.offer_publisher }}" target="_blank">{{ offer.offer_publisher }}</a></p>
-           <!--                     <p><strong>Offer URL:</strong> <a href="{{ offer.offer_url }}" target="_blank">{{ offer.offer_url }}</a></p> -->
+           <!--                 <p><strong>Offer URL:</strong> <a href="{{ offer.offer_url }}" target="_blank">{{ offer.offer_url }}</a></p> -->
                                 <div class="mt-3">
                                     <strong>Offer ID:</strong> <a href="{% url 'selected_offer' offer.offer_id %}" class="text-primary">{{ offer.offer_id }}</a>
                                     

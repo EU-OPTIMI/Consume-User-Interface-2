@@ -1,8 +1,10 @@
+# urls.py
+
 from django.urls import path
 from .views import dataspace_connectors, selected_offer, consume_offer
 
 urlpatterns = [
-    path('connector_offers/', dataspace_connectors, name='connector_offers'),
-    path('selected_offer/<str:offer_id>/', selected_offer, name='selected_offer'),
-    path('consume_offer/<path:offer_id>/', consume_offer, name='consume_offer'),
+    path('connector_offers/',          dataspace_connectors, name='connector_offers'),
+    path('selected_offer/<str:offer_id>/', selected_offer,  name='selected_offer'),
+    path('consume_offer/<path:offer_id>/', consume_offer,   name='consume_offer'),
 ]
