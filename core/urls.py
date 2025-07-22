@@ -4,5 +4,5 @@ from django.shortcuts import redirect
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include(('consume.urls', 'consume'), namespace='consume')),
+    path('consume/', include(('consume.urls', 'consume'), namespace='consume')),
 ]
