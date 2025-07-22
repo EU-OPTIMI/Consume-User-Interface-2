@@ -51,6 +51,7 @@ def dataspace_connectors(request):
     - For each connector, iterate all catalogs
     - For each catalog, iterate all offers
     """
+    print("Fetching all connectors...")
     raw = get_all_connectors()
     if isinstance(raw, dict) and raw.get('error'):
         return render(request, 'consume/error.html', {
