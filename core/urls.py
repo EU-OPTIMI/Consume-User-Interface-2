@@ -4,6 +4,5 @@ from django.shortcuts import redirect
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('consume/', include('consume.urls')),
- #   path('', lambda request: redirect('/consume/connector_offers/', permanent=False)),
+    path('', include(('consume.urls', 'consume'), namespace='consume')),
 ]
