@@ -7,9 +7,11 @@ WORKDIR /app
  
 COPY requirements.txt /app/
  
-RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0 procps \
-&& pip install --upgrade pip \
-&& pip install -r requirements.txt
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends libglib2.0-0 procps \
+	&& rm -rf /var/lib/apt/lists/* \
+	&& pip install --upgrade pip \
+	&& pip install -r requirements.txt
  
 COPY . /app/
  
