@@ -49,6 +49,14 @@ WHERE {
 """
 
     try:
+        # Log request details (redact Authorization for safety)
+        redacted_headers = headers.copy()
+        if 'Authorization' in redacted_headers:
+            redacted_headers['Authorization'] = '<REDACTED>'
+        print('Posting to broker', url)
+        print('Params:', {'recipient': BROKER})
+        print('Headers:', redacted_headers)
+
         resp = requests.post(
             url,
             headers=headers,
@@ -56,10 +64,33 @@ WHERE {
             data=sparql.encode('utf-8'),
             verify=False
         )
-        resp.raise_for_status()
+
+        # If the server returns a non-2xx, capture body for debugging
+        try:
+            resp.raise_for_status()
+        except requests.exceptions.HTTPError:
+            body = None
+            try:
+                body = resp.text
+            except Exception:
+                body = '<unable to read response body>'
+            print(f"Broker returned error status {resp.status_code}")
+            print("Response body:", body)
+            return {
+                'error': 'Broker returned error',
+                'status_code': resp.status_code,
+                'body': body
+            }
+
+        # Success path
         print("Response status code:", resp.status_code)
-        print("Full response:", resp.text)  # Log the full response for debugging
-        return resp.json()
+        print("Full response:", resp.text)
+        try:
+            return resp.json()
+        except ValueError:
+            # Not JSON — return raw text for inspection
+            return {'@graph': [], 'raw': resp.text}
+
     except requests.exceptions.RequestException as e:
         print("Error fetching connectors:", e)
-        return {"error": "Failed to fetch connectors from the broker."}
+        return {"error": f"Failed to fetch connectors from the broker: {e}"}
