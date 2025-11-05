@@ -299,34 +299,90 @@ def get_data(artifact_url):
     return response
 
 
+def _truncate_text(text, limit=2000):
+    """Return text trimmed to limit with ellipsis if truncated."""
+    if text is None:
+        return ''
+    if len(text) <= limit:
+        return text
+    return text[:limit] + "\n…\n"
+
+
 def runner(offer_url):
     """
     Given a full offer_url, run the end-to-end sequence to get the artifact URL.
     """
     offer_id = offer_url.split('/')[-1]
     logger.info("Starting consumption pipeline for offer %s", offer_id)
+    steps = []
 
     # Fetch the offer details
     offer = get_selected_offer(offer_id)
     logger.debug("Offer object: %s", json.dumps(offer, indent=2))
+    steps.append({
+        'label': 'Offer discovery',
+        'description': f"Retrieved offer metadata from {CONNECTOR_BASE}api/offers/{offer_id}",
+        'status': 'completed'
+    })
 
     # Get the catalog URL associated with the offer
     catalog_url = get_selected_offers_catalog_url(offer)
     logger.info("Resolved catalog URL %s", catalog_url)
+    steps.append({
+        'label': 'Catalog lookup',
+        'description': f"Resolved catalog for offer: {catalog_url}",
+        'status': 'completed'
+    })
 
     # Perform the description request
     action, artifact = description_request(offer, catalog_url)
     logger.info("Description request yielded action=%s artifact=%s", action, artifact)
+    steps.append({
+        'label': 'Description request',
+        'description': f"IDS description returned action {action} and artifact {artifact}",
+        'status': 'completed'
+    })
 
     # Perform the contract request
     agreement_url = contract_request(action, artifact, offer_id)
     logger.info("Received agreement URL %s", agreement_url)
+    steps.append({
+        'label': 'Contract negotiation',
+        'description': f"Established contract and received agreement URL {agreement_url}",
+        'status': 'completed'
+    })
 
     # Get the artifact URL
     artifact_url = get_agreement(agreement_url)
     logger.info("Resolved artifact URL %s", artifact_url)
+    steps.append({
+        'label': 'Artifact agreement',
+        'description': f"Resolved artifact endpoint {artifact_url}",
+        'status': 'completed'
+    })
 
     # Optionally fetch the data (if needed)
     response = get_data(artifact_url)
+    steps.append({
+        'label': 'Artifact retrieval',
+        'description': f"Fetched artifact data (status {response.status_code})",
+        'status': 'completed'
+    })
 
-    return artifact_url
+    curl_cmd = f'curl -k -H "Authorization: {AUTH_HEADER.get("Authorization", "")}" "{artifact_url}"'
+
+    response_headers = {
+        k: v for k, v in response.headers.items()
+    }
+    preview = _truncate_text(response.text)
+
+    return {
+        'artifact_url': artifact_url,
+        'steps': steps,
+        'curl_command': curl_cmd,
+        'response_preview': {
+            'status_code': response.status_code,
+            'headers': response_headers,
+            'body': preview
+        }
+    }

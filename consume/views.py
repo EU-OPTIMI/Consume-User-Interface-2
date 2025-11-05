@@ -158,12 +158,15 @@ def consume_offer(request, offer_id):
     offer_url = f"{BASE_URL.rstrip('/')}/api/offers/{raw_id}"
 
     try:
-        artifact_url = runner(offer_url)
+        result = runner(offer_url)
     except Exception as e:
         return render(request, 'consume/error.html', {
             'error': f"Failed to consume offer {raw_id}: {e}"
         })
 
     return render(request, 'consume/consume_offer.html', {
-        'artifact_url': artifact_url
+        'artifact_url': result['artifact_url'],
+        'steps': result.get('steps', []),
+        'curl_command': result.get('curl_command'),
+        'response_preview': result.get('response_preview', {})
     })

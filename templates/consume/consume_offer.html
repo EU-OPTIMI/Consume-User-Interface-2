@@ -6,13 +6,8 @@
     <title>Consume Offer</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
-        body {
-            background-color: #f4f7fa;
-        }
-        .container {
-            margin-top: 50px;
-            max-width: 700px;
-        }
+        body { background-color: #f4f7fa; }
+        .container { margin-top: 40px; max-width: 900px; }
         .card {
             border-radius: 0.75rem;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -24,25 +19,79 @@
             font-weight: 600;
             color: #0056b3;
         }
-        .card-text {
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-top: 25px;
+            margin-bottom: 12px;
+            color: #0b3d91;
+        }
+        .step-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid #e3e8ee;
+            border-radius: 10px;
+            background-color: #f9fbff;
+        }
+        .step-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
             font-size: 1.1rem;
+            color: #fff;
+            background-color: #28a745;
+        }
+        .step-content h5 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #212529;
+        }
+        .step-content p {
+            margin: 6px 0 0;
+            font-size: 0.95rem;
             color: #495057;
         }
-        .input-group {
-            margin-top: 20px;
+        .input-group { margin-top: 10px; }
+        .btn-copy {
+            margin-left: 10px;
+        }
+        pre.code-block {
+            background: #1e2330;
+            color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            max-height: 320px;
+        }
+        .detail-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        .detail-list li {
+            font-family: monospace;
+            font-size: 0.9rem;
+            background: #eef2f7;
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin-bottom: 6px;
         }
         .btn-secondary {
             margin-top: 20px;
             font-size: 1rem;
             padding: 10px 20px;
-        }
-        .open-icon {
-            margin-left: 10px;
-            color: #007bff;
-            cursor: pointer;
-        }
-        .open-icon:hover {
-            color: #0056b3;
         }
     </style>
 </head>
@@ -51,9 +100,34 @@
     <div class="container">
         <div class="card">
             <h1 class="card-title mb-4">Offer Consumption</h1>
-            <p class="card-text">The offer has been successfully consumed. Here is the URL to access the data:</p>
-            
-            <!-- URL Field with Open Icon -->
+            <p class="card-text">The offer has been successfully consumed. Review the IDS workflow and access details below.</p>
+
+            <h2 class="section-title">IDS process checklist</h2>
+            <ul class="step-list">
+                {% for step in steps %}
+                <li class="step-item">
+                    <span class="step-icon">
+                        <i class="fas fa-check"></i>
+                    </span>
+                    <div class="step-content">
+                        <h5>{{ step.label|capfirst }}</h5>
+                        <p>{{ step.description }}</p>
+                    </div>
+                </li>
+                {% empty %}
+                <li class="step-item">
+                    <span class="step-icon">
+                        <i class="fas fa-info"></i>
+                    </span>
+                    <div class="step-content">
+                        <h5>No steps recorded</h5>
+                        <p>The pipeline did not report any intermediate steps.</p>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <h2 class="section-title">Artifact URL</h2>
             <div class="input-group">
                 <input type="text" class="form-control" id="offerUrl" value="{{ artifact_url }}" readonly>
                 <div class="input-group-append">
@@ -62,6 +136,38 @@
                     </button>
                 </div>
             </div>
+            <button class="btn btn-outline-primary btn-sm btn-copy" onclick="copyText('{{ artifact_url|escapejs }}')">
+                <i class="fas fa-copy"></i> Copy URL
+            </button>
+
+            <h2 class="section-title">cURL command</h2>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <small class="text-muted">Use this command to retrieve the artifact directly.</small>
+                <button class="btn btn-outline-primary btn-sm" onclick="copyText('{{ curl_command|escapejs }}')">
+                    <i class="fas fa-copy"></i> Copy command
+                </button>
+            </div>
+            <pre class="code-block"><code>{{ curl_command }}</code></pre>
+
+            <h2 class="section-title">Response preview</h2>
+            <div class="mb-3">
+                <p class="mb-1"><strong>Status:</strong> {{ response_preview.status_code }}</p>
+                {% if response_preview.headers %}
+                <p class="mb-1"><strong>Headers:</strong></p>
+                <ul class="detail-list">
+                    {% for key, value in response_preview.headers.items %}
+                    <li>{{ key }}: {{ value }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <small class="text-muted">Body preview (truncated to 2000 characters).</small>
+                <button class="btn btn-outline-primary btn-sm" onclick="copyText('{{ response_preview.body|escapejs }}')">
+                    <i class="fas fa-copy"></i> Copy body
+                </button>
+            </div>
+            <pre class="code-block"><code>{{ response_preview.body }}</code></pre>
 
             <!-- Back to Offers Button -->
             <a href="{% url 'consume:connector_offers' %}" class="btn btn-secondary mt-3">Back to Offers</a>
@@ -72,6 +178,18 @@
     <script>
         function openInNewTab(url) {
             window.open(url, '_blank').focus();
+        }
+        function copyText(text) {
+            if (!navigator.clipboard) {
+                const temp = document.createElement('textarea');
+                temp.value = text;
+                document.body.appendChild(temp);
+                temp.select();
+                document.execCommand('copy');
+                document.body.removeChild(temp);
+            } else {
+                navigator.clipboard.writeText(text);
+            }
         }
     </script>
 
