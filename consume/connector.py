@@ -1,6 +1,8 @@
-import requests
 import json
 import re
+import logging
+
+import requests
 from decouple import config
 
 # Read environment variables
@@ -21,15 +23,22 @@ AUTH_HEADER = {
     'Authorization': config('AUTHORIZATION', default='').strip()
 }
 
+logger = logging.getLogger(__name__)
+
+
 def get_selected_offer(offer_id):
     """
     Fetch the offer details for a given offer_id from the connector API.
     """
     url = f'{CONNECTOR_BASE}api/offers/{offer_id}'
+    logger.info("Fetching offer %s at %s", offer_id, url)
     response = requests.get(url, headers=AUTH_HEADER, verify=False)
+    logger.debug("Offer response status=%s headers=%s", response.status_code, response.headers)
     response.raise_for_status()
     offer = response.json()
+    logger.debug("Offer payload: %s", json.dumps(offer, indent=2))
     return offer
+
 
 def get_selected_offers_catalog_url(offer):
     """
@@ -58,25 +67,41 @@ def get_selected_offers_catalog_url(offer):
         'Accept': 'application/json',
         'Authorization': AUTH_HEADER['Authorization']
     }
-    print(f"Fetching catalog URL: {catalog_url}")
+    logger.info("Fetching catalog listing from %s", catalog_url)
     response = requests.get(catalog_url, headers=headers, verify=False)
+    logger.debug(
+        "Catalog list response status=%s headers=%s",
+        response.status_code,
+        response.headers
+    )
     if response.status_code != 200:
-        print(f"Failed to fetch catalog URL: {catalog_url}, Status Code: {response.status_code}")
-        print(f"Response Text: {response.text}")
+        logger.error(
+            "Catalog request failed url=%s status=%s body=%s",
+            catalog_url,
+            response.status_code,
+            response.text
+        )
         raise ValueError(f"Failed to fetch catalog URL: {catalog_url}, Status Code: {response.status_code}")
 
     try:
         data = response.json()
     except json.JSONDecodeError as e:
-        print(f"Error decoding JSON response from {catalog_url}: {e}")
-        print(f"Response Text: {response.text}")
+        logger.exception(
+            "Invalid JSON decoding catalog response url=%s body=%s",
+            catalog_url,
+            response.text
+        )
         raise ValueError(f"Invalid JSON response from {catalog_url}")
 
     try:
         first_catalog = data["_embedded"]["catalogs"][0]
         catalog_self_href = first_catalog["_links"]["self"]["href"]
     except (KeyError, IndexError) as e:
-        print("Unexpected JSON structure:", data)
+        logger.error(
+            "Catalog response missing expected structure. payload=%s error=%s",
+            json.dumps(data, indent=2),
+            e
+        )
         raise ValueError("Could not find any catalog entries in the response.")
 
     # Rewrite the returned href under CONNECTOR_BASE as well
@@ -86,11 +111,12 @@ def get_selected_offers_catalog_url(offer):
 
     return rewritten_self
 
+
 def description_request(offer, catalog_url):
     """
     Perform an IDS description request for the given catalog_url.
     """
-    print("catalog_urlcatalog_url", catalog_url)
+    logger.info("Issuing description request for catalog %s", catalog_url)
     url = f'{CONNECTOR_BASE}api/ids/description'
     headers = AUTH_HEADER.copy()
     params = {
@@ -99,12 +125,33 @@ def description_request(offer, catalog_url):
     }
 
     response = requests.post(url, headers=headers, params=params, verify=False)
+    logger.debug(
+        "Description response status=%s headers=%s body=%s",
+        response.status_code,
+        response.headers,
+        response.text
+    )
     response.raise_for_status()
     response_json = response.json()
-    print('DESCRIPTION REQUEST RESPONSE:', response_json)
-    action = response_json['ids:offeredResource'][0]['ids:contractOffer'][0]['ids:permission'][0]['ids:action'][0]['@id']
-    artifact = response_json['ids:offeredResource'][0]['ids:representation'][0]['ids:instance'][0]['@id']
+    logger.debug("Description JSON: %s", json.dumps(response_json, indent=2))
+
+    try:
+        offered_resource = response_json['ids:offeredResource'][0]
+        contract_offer = offered_resource['ids:contractOffer'][0]
+        permission = contract_offer['ids:permission'][0]
+        action = permission['ids:action'][0]['@id']
+        representation = offered_resource['ids:representation'][0]
+        artifact = representation['ids:instance'][0]['@id']
+    except (KeyError, IndexError, TypeError) as exc:
+        logger.error(
+            "Description payload missing expected IDS fields: %s error=%s",
+            json.dumps(response_json, indent=2),
+            exc
+        )
+        raise ValueError("Description response missing IDS contract metadata") from exc
+
     return action, artifact
+
 
 def contract_request(action, artifact, offer_id):
     """
@@ -133,11 +180,28 @@ def contract_request(action, artifact, offer_id):
         }
     ]
 
-    response = requests.post(url, headers=headers, params=params, data=json.dumps(payload), verify=False)
+    logger.info(
+        "Submitting contract request offer=%s artifact=%s action=%s",
+        offer_id,
+        artifact,
+        action
+    )
+    response = requests.post(
+        url,
+        headers=headers,
+        params=params,
+        data=json.dumps(payload),
+        verify=False
+    )
+    logger.debug(
+        "Contract response status=%s headers=%s body=%s",
+        response.status_code,
+        response.headers,
+        response.text
+    )
     response.raise_for_status()
     response_json = response.json()
-    print('--------------------------------------------------------------------------------------------')
-    print('CONTRACT REQUEST RESPONSE:', response_json)
+    logger.debug("Contract response JSON: %s", json.dumps(response_json, indent=2))
     agreement_url_1 = response_json["_links"]["artifacts"]["href"]
     agreement_url = agreement_url_1.split('{')[0]
 
@@ -148,6 +212,7 @@ def contract_request(action, artifact, offer_id):
         agreement_url = CONNECTOR_BASE + agreement_url
 
     return agreement_url
+
 
 def get_agreement(agreement_url):
     """
@@ -172,25 +237,41 @@ def get_agreement(agreement_url):
         'Accept': 'application/json',
         'Authorization': AUTH_HEADER['Authorization']
     }
-    print(f"Fetching artifacts URL: {artifacts_url}")
+    logger.info("Fetching artifacts from %s", artifacts_url)
     response = requests.get(artifacts_url, headers=headers, verify=False)
+    logger.debug(
+        "Artifacts response status=%s headers=%s",
+        response.status_code,
+        response.headers
+    )
     if response.status_code != 200:
-        print(f"Failed to fetch artifacts URL: {artifacts_url}, Status Code: {response.status_code}")
-        print(f"Response Text: {response.text}")
+        logger.error(
+            "Artifacts request failed url=%s status=%s body=%s",
+            artifacts_url,
+            response.status_code,
+            response.text
+        )
         raise ValueError(f"Failed to fetch artifacts URL: {artifacts_url}, Status Code: {response.status_code}")
 
     try:
         data = response.json()
     except json.JSONDecodeError as e:
-        print(f"Error decoding JSON response from {artifacts_url}: {e}")
-        print(f"Response Text: {response.text}")
+        logger.exception(
+            "Invalid JSON decoding artifacts response url=%s body=%s",
+            artifacts_url,
+            response.text
+        )
         raise ValueError(f"Invalid JSON response from {artifacts_url}")
 
     try:
         first_artifact = data["_embedded"]["artifacts"][0]
         artifact_href = first_artifact["_links"]["data"]["href"]
     except (KeyError, IndexError) as e:
-        print("Unexpected JSON structure:", data)
+        logger.error(
+            "Artifacts response missing expected structure payload=%s error=%s",
+            json.dumps(data, indent=2),
+            e
+        )
         raise ValueError("Could not find any artifact entries in the response.")
 
     # Rewrite the returned href under CONNECTOR_BASE if needed
@@ -200,6 +281,7 @@ def get_agreement(agreement_url):
 
     return rewritten_art
 
+
 def get_data(artifact_url):
     """
     Fetch the actual data at the artifact URL.
@@ -207,41 +289,42 @@ def get_data(artifact_url):
     headers = AUTH_HEADER.copy()
 
     response = requests.get(artifact_url, headers=headers, verify=False)
-    print('--------------------------------------------------------------')
-    print('GEEEET DATA RESPONSE')
-    print("Status Code:", response.status_code)
-    print("Headers:", response.headers)
-    print("Content:", response.content)  # Or use response.text
-    print("URL:", response.url)
-    print('RESPONSE', response.text)
+    logger.info("Fetching artifact payload from %s", artifact_url)
+    logger.debug(
+        "Artifact data response status=%s headers=%s body_preview=%s",
+        response.status_code,
+        response.headers,
+        response.text[:500]
+    )
     return response
+
 
 def runner(offer_url):
     """
     Given a full offer_url, run the end-to-end sequence to get the artifact URL.
     """
     offer_id = offer_url.split('/')[-1]
-    print('OFFER ID:', offer_id)
+    logger.info("Starting consumption pipeline for offer %s", offer_id)
 
     # Fetch the offer details
     offer = get_selected_offer(offer_id)
-    print('OFFER:', offer)
+    logger.debug("Offer object: %s", json.dumps(offer, indent=2))
 
     # Get the catalog URL associated with the offer
     catalog_url = get_selected_offers_catalog_url(offer)
-    print('CATALOG URL:', catalog_url)
+    logger.info("Resolved catalog URL %s", catalog_url)
 
     # Perform the description request
     action, artifact = description_request(offer, catalog_url)
-    print('ACTION:', action)
+    logger.info("Description request yielded action=%s artifact=%s", action, artifact)
 
     # Perform the contract request
     agreement_url = contract_request(action, artifact, offer_id)
-    print('AGREEMENT URL:', agreement_url)
+    logger.info("Received agreement URL %s", agreement_url)
 
     # Get the artifact URL
     artifact_url = get_agreement(agreement_url)
-    print('ARTIFACT URL:', artifact_url)
+    logger.info("Resolved artifact URL %s", artifact_url)
 
     # Optionally fetch the data (if needed)
     response = get_data(artifact_url)
