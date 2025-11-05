@@ -69,17 +69,38 @@ WHERE {
         try:
             resp.raise_for_status()
         except requests.exceptions.HTTPError:
-            body = None
+            body_text = ''
             try:
-                body = resp.text
+                body_text = resp.text
             except Exception:
-                body = '<unable to read response body>'
-            print(f"Broker returned error status {resp.status_code}")
-            print("Response body:", body)
+                body_text = '<unable to read response body>'
+
+            # For 417 NOT_FOUND responses with empty broker index we treat it as "no connectors yet"
+            if resp.status_code == 417:
+                try:
+                    payload = resp.json()
+                except ValueError:
+                    payload = {}
+
+                reason = (
+                    payload.get('details', {})
+                           .get('reason', {})
+                           .get('@id')
+                )
+                message = payload.get('message', '')
+                if reason == 'https://w3id.org/idsa/code/NOT_FOUND':
+                    print("Broker index reported empty. Returning no connectors.")
+                    return {'@graph': []}
+
+                print(f"Broker returned 417 response we could not map: {payload}")
+            else:
+                print(f"Broker returned error status {resp.status_code}")
+                print("Response body:", body_text)
+
             return {
                 'error': 'Broker returned error',
                 'status_code': resp.status_code,
-                'body': body
+                'body': body_text
             }
 
         # Success path
