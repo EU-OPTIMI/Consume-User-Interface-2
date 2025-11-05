@@ -3,7 +3,8 @@
 import requests
 from urllib.parse import urljoin, unquote
 from decouple import config
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.urls import reverse
 from .connector import runner
 from .broker import get_all_connectors
 
@@ -132,8 +133,9 @@ def selected_offer(request, offer_id):
     """
     Fetch the full details of one offer and render it.
     """
+    raw_id = unquote(offer_id)
     try:
-        url = f"{BASE_URL.rstrip('/')}/api/offers/{offer_id}"
+        url = f"{BASE_URL.rstrip('/')}/api/offers/{raw_id}"
         resp = requests.get(url, headers=AUTH_HEADERS, verify=False)
         resp.raise_for_status()
         offer = resp.json()
@@ -144,9 +146,34 @@ def selected_offer(request, offer_id):
             'error': f"Failed to fetch offer {offer_id}: {e}"
         })
 
+    # Try to consume offer immediately so the page can surface IDS workflow info
+    offer_url = f"{BASE_URL.rstrip('/')}/api/offers/{raw_id}"
+    should_consume = request.GET.get('consume') == '1'
+    consumption = None
+    consumption_error = None
+
+    if should_consume:
+        try:
+            consumption = runner(offer_url)
+        except Exception as exc:
+            consumption_error = str(exc)
+
+    # stepper state flags
+    step_state = {
+        'discover': True,
+        'select': True,
+        'explore': should_consume,
+        'consume': consumption is not None,
+        'consume_error': consumption_error is not None,
+    }
+
     return render(request, 'consume/selected_offer.html', {
         'offer':    offer,
-        'offer_id': offer_id
+        'offer_id': offer_id,
+        'should_consume': should_consume,
+        'consumption': consumption,
+        'consumption_error': consumption_error,
+        'step_state': step_state
     })
 
 
@@ -157,16 +184,6 @@ def consume_offer(request, offer_id):
     raw_id = unquote(offer_id)
     offer_url = f"{BASE_URL.rstrip('/')}/api/offers/{raw_id}"
 
-    try:
-        result = runner(offer_url)
-    except Exception as e:
-        return render(request, 'consume/error.html', {
-            'error': f"Failed to consume offer {raw_id}: {e}"
-        })
-
-    return render(request, 'consume/consume_offer.html', {
-        'artifact_url': result['artifact_url'],
-        'steps': result.get('steps', []),
-        'curl_command': result.get('curl_command'),
-        'response_preview': result.get('response_preview', {})
-    })
+    # Redirect to the unified selected_offer view with consume mode enabled
+    target = f"{reverse('consume:selected_offer', args=[offer_id])}?consume=1"
+    return redirect(target)
