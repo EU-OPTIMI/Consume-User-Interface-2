@@ -349,18 +349,49 @@
 
                 <div class="detail-card mb-4">
                     <h2 class="section-title">Connector context</h2>
-                    <!--<div class="info-row">
-                        <span>Access endpoint</span>
-                        <span>{{ offer.offer_url }}</span>
-                    </div>-->
-                    
                     <div class="info-row">
                         <span>Publisher</span>
                         <span>{{ offer.publisher|default:"Not shared" }}</span>
                     </div>
                     <div class="info-row">
-                        <span>License</span>
-                        <span>{{ offer.license|default:"No license provided" }}</span>
+                        <span>Access endpoint</span>
+                        <span>{{ offer.offer_url }}</span>
+                    </div>
+                </div>
+
+                <div class="detail-card mb-4" id="policy-card">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                        <h2 class="section-title mb-0">Policy &amp; license</h2>
+                        <span class="text-muted small">Review before consuming</span>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-semibold">License</span>
+                            {% if offer.license %}
+                                <a href="{{ offer.license }}" target="_blank" rel="noopener" class="small">Open in new tab</a>
+                            {% endif %}
+                        </div>
+                        {% if offer.license %}
+                            <div class="input-group">
+                                <input type="text" class="form-control" value="{{ offer.license }}" readonly>
+                                <button class="btn btn-outline-secondary" onclick="openInNewTab('{{ offer.license }}')">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </button>
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm copy-btn mt-2" onclick="copyText('{{ offer.license|escapejs }}')">
+                                <i class="bi bi-clipboard"></i> Copy link
+                            </button>
+                        {% else %}
+                            <p class="text-muted small mb-0">No license document was provided for this offer.</p>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <h4 class="small text-uppercase text-muted mb-1">Policy summary</h4>
+                        <p class="small mb-0">{{ policy_summary }}</p>
+                    </div>
+                    <div>
+                        <h4 class="small text-uppercase text-muted mb-1">Policy (raw)</h4>
+                        <pre class="code-block"><code>{{ policy_raw }}</code></pre>
                     </div>
                 </div>
 
@@ -509,7 +540,13 @@
                 <div class="cta-card">
                     <h3>Ready to explore?</h3>
                     <p class="text-muted small mb-3">We'll guide you through the IDS negotiation and hand you the access URL with a ready-to-use curl command.</p>
-                    <a href="?consume=1" class="btn btn-primary btn-lg w-100 mb-3">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="" id="policyConsent">
+                        <label class="form-check-label small" for="policyConsent">
+                            I have reviewed the policy &amp; license details in the card above and agree to the stated terms.
+                        </label>
+                    </div>
+                    <a href="?consume=1" class="btn btn-primary btn-lg w-100 mb-3 disabled" id="startConsumeBtn" aria-disabled="true">
                         <i class="bi bi-lightning-charge-fill me-2"></i>Start explore &amp; consume
                     </a>
                     <p class="text-muted small mb-0">
@@ -683,6 +720,24 @@
                 navigator.clipboard.writeText(text);
             }
         }
+        document.addEventListener('DOMContentLoaded', function () {
+            var consent = document.getElementById('policyConsent');
+            var startBtn = document.getElementById('startConsumeBtn');
+            if (consent && startBtn) {
+                var syncState = function () {
+                    var enabled = consent.checked;
+                    startBtn.classList.toggle('disabled', !enabled);
+                    startBtn.setAttribute('aria-disabled', String(!enabled));
+                };
+                consent.addEventListener('change', syncState);
+                startBtn.addEventListener('click', function (event) {
+                    if (!consent.checked) {
+                        event.preventDefault();
+                    }
+                });
+                syncState();
+            }
+        });
     </script>
 </body>
 </html>

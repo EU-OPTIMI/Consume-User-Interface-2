@@ -557,6 +557,24 @@ def selected_offer(request, offer_id):
             'error': f"Failed to fetch offer {offer_id}: {e}"
         })
 
+    policy_source = (
+        offer.get('policy')
+        or offer.get('usagePolicy')
+        or offer.get('contract')
+        or offer.get('license')
+        or {}
+    )
+    if isinstance(policy_source, (dict, list)):
+        policy_raw = json.dumps(policy_source, indent=2)
+    else:
+        policy_raw = policy_source or "No policy provided."
+    policy_summary = (
+        offer.get('policy_summary')
+        or offer.get('policySummary')
+        or offer.get('policyDescription')
+        or "Review and agree to the provider's license/policy terms before consuming the offer."
+    )
+
     # Try to consume offer immediately so the page can surface IDS workflow info
     offer_url = f"{BASE_URL.rstrip('/')}/api/offers/{raw_id}"
     should_consume = request.GET.get('consume') == '1'
@@ -590,6 +608,8 @@ def selected_offer(request, offer_id):
         'consumption_error': consumption_error,
         'step_state': step_state,
         'offer_extras': offer_extras,
+        'policy_raw': policy_raw,
+        'policy_summary': policy_summary,
         'workflow_summary': [
             {
                 'label': step.get('label', 'Workflow step'),
