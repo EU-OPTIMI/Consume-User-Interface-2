@@ -299,15 +299,6 @@ def get_data(artifact_url):
     return response
 
 
-def _truncate_text(text, limit=2000):
-    """Return text trimmed to limit with ellipsis if truncated."""
-    if text is None:
-        return ''
-    if len(text) <= limit:
-        return text
-    return text[:limit] + "\n…\n"
-
-
 def runner(offer_url):
     """
     Given a full offer_url, run the end-to-end sequence to get the artifact URL.
@@ -374,7 +365,7 @@ def runner(offer_url):
     response_headers = {
         k: v for k, v in response.headers.items()
     }
-    preview = _truncate_text(response.text)
+    preview = response.text
 
     return {
         'artifact_url': artifact_url,
