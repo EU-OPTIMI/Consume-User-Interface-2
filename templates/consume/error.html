@@ -9,10 +9,59 @@
       .container { max-width: 800px; margin: 0 auto }
       pre { background:#f7f7f7; padding:1rem; border-radius:6px; overflow:auto }
       a { color:#0366d6 }
+      .profile-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 18px;
+        border-radius: 12px;
+        background: #0f172a;
+        color: #f8fafc;
+        margin-bottom: 24px;
+      }
+      .profile-meta {
+        display: flex;
+        flex-direction: column;
+      }
+      .profile-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: rgba(248, 250, 252, 0.7);
+      }
+      .profile-name {
+        font-weight: 600;
+      }
+      .profile-sub {
+        font-size: 0.85rem;
+        color: rgba(248, 250, 252, 0.7);
+      }
+      .logout-link {
+        color: #0f172a;
+        background: #fff;
+        padding: 6px 12px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
     </style>
   </head>
   <body>
     <div class="container">
+      <div class="profile-bar">
+        <div class="profile-meta">
+          <span class="profile-label">Signed in</span>
+          <span class="profile-name">
+            {% firstof request.auth_profile.name request.auth_profile.email request.auth_profile.username request.auth_profile.id "Authenticated user" %}
+          </span>
+          {% if request.auth_profile.email %}
+            <span class="profile-sub">{{ request.auth_profile.email }}</span>
+          {% endif %}
+        </div>
+        <a href="{% url 'auth_logout' %}" class="logout-link">Logout</a>
+      </div>
       <h1>Something went wrong</h1>
       <p>The application encountered an error while processing your request.</p>
 

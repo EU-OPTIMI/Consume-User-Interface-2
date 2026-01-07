@@ -38,6 +38,15 @@ def get_selected_offer(offer_id):
     offer = response.json()
     logger.debug("Offer payload: %s", json.dumps(offer, indent=2))
     return offer
+def get_policy(offer_id):
+    url = f'{CONNECTOR_BASE}api/offers/{offer_id}/policy'
+    response = requests.get(url, headers=AUTH_HEADER, verify=False)
+    if response.status_code == 200:
+        try:
+            return response.json()
+        except ValueError:
+            return response.text
+    return None
 
 
 def get_selected_offers_catalog_url(offer):

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'core.middleware.AuthServiceMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -117,6 +118,33 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = config('DJANGO_STATIC_URL', default='static/')
+
+# Auth service configuration
+AUTH_SERVICE_BASE_URL = config('AUTH_SERVICE_BASE_URL', default='').strip()
+AUTH_SERVICE_PROFILE_ENDPOINT = config(
+    'AUTH_SERVICE_PROFILE_ENDPOINT', default='/api/auth/me/'
+)
+AUTH_SERVICE_LOGIN_PAGE = config(
+    'AUTH_SERVICE_LOGIN_PAGE', default='/api/auth/login-page/'
+)
+AUTH_SERVICE_LOGOUT_PAGE = config(
+    'AUTH_SERVICE_LOGOUT_PAGE', default='/api/auth/logout/'
+)
+AUTH_SERVICE_SESSION_COOKIE = config(
+    'AUTH_SERVICE_SESSION_COOKIE', default='sessionid'
+)
+AUTH_SERVICE_TIMEOUT = config('AUTH_SERVICE_TIMEOUT', default=3, cast=int)
+AUTH_SERVICE_VERIFY_SSL = config('AUTH_SERVICE_VERIFY_SSL', default=True, cast=bool)
+AUTH_SERVICE_ENFORCE = config('AUTH_SERVICE_ENFORCE', default=True, cast=bool)
+
+
+def _parse_csv(value):
+    return [item.strip() for item in value.split(',') if item.strip()]
+
+
+AUTH_SERVICE_ALLOWLIST = _parse_csv(
+    config('AUTH_SERVICE_ALLOWLIST', default='')
+)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

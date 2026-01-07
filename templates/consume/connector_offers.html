@@ -107,10 +107,51 @@
         .highlighted {
             background: #fde68a;
         }
+        .profile-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 12px 18px;
+            border-radius: 16px;
+            background: #0f172a;
+            color: #f8fafc;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+        }
+        .profile-meta {
+            display: flex;
+            flex-direction: column;
+        }
+        .profile-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: rgba(248, 250, 252, 0.7);
+        }
+        .profile-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .profile-sub {
+            font-size: 0.85rem;
+            color: rgba(248, 250, 252, 0.7);
+        }
     </style>
 </head>
 <body>
     <div class="container py-5">
+        <div class="profile-bar mb-4">
+            <div class="profile-meta">
+                <span class="profile-label">Signed in</span>
+                <span class="profile-name">
+                    {% firstof request.auth_profile.name request.auth_profile.email request.auth_profile.username request.auth_profile.id "Authenticated user" %}
+                </span>
+                {% if request.auth_profile.email %}
+                    <span class="profile-sub">{{ request.auth_profile.email }}</span>
+                {% endif %}
+            </div>
+            <a href="{% url 'auth_logout' %}" class="btn btn-light btn-sm">Logout</a>
+        </div>
         <section class="hero mb-5">
             <div class="row align-items-center">
                 <div class="col-lg-9">

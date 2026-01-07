@@ -8,7 +8,7 @@ from decouple import config
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
-from .connector import runner
+from .connector import runner, get_policy
 from .broker import get_all_connectors
 
 # Configuration from .env
@@ -557,8 +557,10 @@ def selected_offer(request, offer_id):
             'error': f"Failed to fetch offer {offer_id}: {e}"
         })
 
+    live_policy = get_policy(raw_id) or {}
     policy_source = (
-        offer.get('policy')
+        live_policy
+        or offer.get('policy')
         or offer.get('usagePolicy')
         or offer.get('contract')
         or offer.get('license')
@@ -610,6 +612,7 @@ def selected_offer(request, offer_id):
         'offer_extras': offer_extras,
         'policy_raw': policy_raw,
         'policy_summary': policy_summary,
+        'live_policy': live_policy if isinstance(live_policy, (dict, list, str)) else None,
         'workflow_summary': [
             {
                 'label': step.get('label', 'Workflow step'),
