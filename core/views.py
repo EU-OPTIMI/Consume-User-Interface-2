@@ -7,7 +7,11 @@ from django.http import HttpResponseRedirect
 def auth_logout(request):
     base_url = getattr(settings, "AUTH_SERVICE_BASE_URL", "").strip()
     logout_page = getattr(settings, "AUTH_SERVICE_LOGOUT_PAGE", "/api/auth/logout/")
-    next_url = request.GET.get("next") or request.build_absolute_uri("/")
+    print('RequestGET', request.GET)
+    next_url =  getattr(settings, "AUTH_LOGOUT_REDIRECT_URL", "http://localhost:8002/consume/")
+    print('NEXT URL', next_url)
+    #getattr(settings, "AUTH_LOGOUT_REDIRECT_URL", "http://localhost:8002/consume/")
+    #request.build_absolute_uri("/")
     print('Logout page:',logout_page )
     print('BASE URL:',base_url)
 
