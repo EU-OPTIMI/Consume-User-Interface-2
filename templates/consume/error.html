@@ -37,6 +37,11 @@
         font-size: 0.85rem;
         color: rgba(248, 250, 252, 0.7);
       }
+      .profile-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
       .logout-link {
         color: #0f172a;
         background: #fff;
@@ -60,7 +65,20 @@
             <span class="profile-sub">{{ request.auth_profile.email }}</span>
           {% endif %}
         </div>
-        <a href="{% url 'auth_logout' %}" class="logout-link">Logout</a>
+        <div class="profile-actions">
+          <a href="{% url 'consume:consumed_offers' %}" class="logout-link">My consumed offers</a>
+          {% if request.user.is_authenticated %}
+          <button type="button"
+                  class="logout-link"
+                  id="logoutBtn"
+                  data-logout-url="{{ auth_logout_url }}"
+                  data-login-url="{{ auth_login_url }}">
+            Logout
+          </button>
+          {% else %}
+          <a href="{{ auth_login_url }}?next={{ request.build_absolute_uri|urlencode }}" class="logout-link">Go to login</a>
+          {% endif %}
+        </div>
       </div>
       <h1>Something went wrong</h1>
       <p>The application encountered an error while processing your request.</p>
@@ -74,5 +92,48 @@
 
       <p><a href="/">Return to home</a></p>
     </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const logoutBtn = document.getElementById("logoutBtn");
+        if (!logoutBtn) {
+          return;
+        }
+        const getCookie = (name) => {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) {
+            return parts.pop().split(";").shift();
+          }
+          return null;
+        };
+        const expireCookie = (name) => {
+          document.cookie = `${name}=; Max-Age=0; path=/;`;
+        };
+
+        logoutBtn.addEventListener("click", async (event) => {
+          event.preventDefault();
+          const url = logoutBtn.dataset.logoutUrl;
+          const loginUrl = logoutBtn.dataset.loginUrl;
+          try {
+            await fetch(url, {
+              method: "POST",
+              credentials: "include",
+              headers: {
+                "X-CSRFToken": getCookie("csrftoken") || "",
+              },
+            });
+          } finally {
+            const providerCookie = "{{ provider_cookie_name|default:'provider_sessionid' }}";
+            ["sessionid", "auth_sessionid", "csrftoken", providerCookie].forEach(expireCookie);
+            if (loginUrl) {
+              const next = encodeURIComponent(window.location.origin + window.location.pathname);
+              window.location.href = `${loginUrl}?next=${next}`;
+            } else {
+              window.location.reload();
+            }
+          }
+        });
+      });
+    </script>
   </body>
 </html>

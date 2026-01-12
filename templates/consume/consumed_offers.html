@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Consumed Offers</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: radial-gradient(circle at top, #f5f9ff 0%, #ffffff 60%);
+            min-height: 100vh;
+            font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+            color: #0f172a;
+        }
+        .profile-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 12px 18px;
+            border-radius: 16px;
+            background: #0f172a;
+            color: #f8fafc;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+        }
+        .profile-meta {
+            display: flex;
+            flex-direction: column;
+        }
+        .profile-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: rgba(248, 250, 252, 0.7);
+        }
+        .profile-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .profile-sub {
+            font-size: 0.85rem;
+            color: rgba(248, 250, 252, 0.7);
+        }
+        .profile-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .hero {
+            background: linear-gradient(135deg, #0d6efd, #6610f2);
+            color: #fff;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 25px 45px rgba(13, 110, 253, 0.25);
+            position: relative;
+            overflow: hidden;
+            margin-top: 24px;
+        }
+        .hero h1 {
+            font-weight: 700;
+            font-size: 2.2rem;
+        }
+        .offer-card {
+            border: none;
+            border-radius: 18px;
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+            background: #fff;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            border-radius: 20px;
+            background: rgba(148, 163, 184, 0.1);
+            color: #475569;
+        }
+        .empty-state h3 {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="profile-bar mb-4">
+            <div class="profile-meta">
+                <span class="profile-label">Signed in</span>
+                <span class="profile-name">
+                    {% firstof request.auth_profile.name request.auth_profile.email request.auth_profile.username request.auth_profile.id "Authenticated user" %}
+                </span>
+                {% if request.auth_profile.email %}
+                    <span class="profile-sub">{{ request.auth_profile.email }}</span>
+                {% endif %}
+            </div>
+            <div class="profile-actions">
+                <a href="#" class="btn btn-outline-light btn-sm active" aria-current="page">My consumed offers</a>
+                {% if request.user.is_authenticated %}
+                <button type="button"
+                        class="btn btn-light btn-sm"
+                        id="logoutBtn"
+                        data-logout-url="{{ auth_logout_url }}"
+                        data-login-url="{{ auth_login_url }}">
+                    Logout
+                </button>
+                {% else %}
+                <a href="{{ auth_login_url }}?next={{ request.build_absolute_uri|urlencode }}"
+                   class="btn btn-light btn-sm">
+                    Go to login
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <section class="hero">
+            <h1>My consumed offers</h1>
+            <p class="mb-0">Offers assigned to you in the consumer service.</p>
+        </section>
+
+        {% if consumed_offers_error %}
+            <div class="alert alert-warning mt-4">{{ consumed_offers_error }}</div>
+        {% endif %}
+
+        {% if consumed_offers %}
+        <section class="row g-4 mt-2">
+            {% for offer in consumed_offers %}
+            <div class="col-lg-6">
+                <div class="card offer-card p-4 h-100">
+                    <h3 class="h5 fw-bold text-primary">{{ offer.offer_title|default:"Untitled offer" }}</h3>
+                    <p class="text-muted mb-3">{{ offer.offer_description|default:"No description provided." }}</p>
+
+                    {% if offer.offer_keywords %}
+                    <div class="mb-3">
+                        {% for keyword in offer.offer_keywords %}
+                        <span class="badge text-bg-info text-uppercase">{{ keyword }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="text-muted small mb-3">
+                        <div><strong>Publisher:</strong> {{ offer.offer_publisher|default:"Not shared" }}</div>
+                        <div><strong>Offer ID:</strong> {{ offer.offer_id }}</div>
+                    </div>
+                    <a href="{% url 'consume:selected_offer' offer.offer_id %}" class="btn btn-primary btn-sm">
+                        View offer
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </section>
+        {% else %}
+        <div class="empty-state mt-4">
+            <h3>No consumed offers yet</h3>
+            <p>Consume an offer to see it listed here.</p>
+            <a href="{% url 'consume:connector_offers' %}" class="btn btn-outline-primary mt-2">Browse offers</a>
+        </div>
+        {% endif %}
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const logoutBtn = document.getElementById("logoutBtn");
+            if (!logoutBtn) {
+                return;
+            }
+            const getCookie = (name) => {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) {
+                    return parts.pop().split(";").shift();
+                }
+                return null;
+            };
+            const expireCookie = (name) => {
+                document.cookie = `${name}=; Max-Age=0; path=/;`;
+            };
+
+            logoutBtn.addEventListener("click", async (event) => {
+                event.preventDefault();
+                const url = logoutBtn.dataset.logoutUrl;
+                const loginUrl = logoutBtn.dataset.loginUrl;
+                try {
+                    await fetch(url, {
+                        method: "POST",
+                        credentials: "include",
+                        headers: {
+                            "X-CSRFToken": getCookie("csrftoken") || "",
+                        },
+                    });
+                } finally {
+                    const providerCookie = "{{ provider_cookie_name|default:'provider_sessionid' }}";
+                    ["sessionid", "auth_sessionid", "csrftoken", providerCookie].forEach(expireCookie);
+                    if (loginUrl) {
+                        const next = encodeURIComponent(window.location.origin + window.location.pathname);
+                        window.location.href = `${loginUrl}?next=${next}`;
+                    } else {
+                        window.location.reload();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 # consume/urls.py
 
 from django.urls import path
-from .views import dataspace_connectors, selected_offer, consume_offer
+from .views import dataspace_connectors, selected_offer, consume_offer, consumed_offers
 
 app_name = 'consume'
 
@@ -26,4 +26,12 @@ urlpatterns = [
         consume_offer,
         name='consume_offer'
     ),
+
+    # GET /consume/consumed/            → list consumed offers
+    path(
+        'consumed/',
+        consumed_offers,
+        name='consumed_offers'
+    ),
+
 ]

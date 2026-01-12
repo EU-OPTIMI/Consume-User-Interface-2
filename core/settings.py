@@ -43,10 +43,10 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'core.middleware.AuthServiceMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.AuthServiceMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -63,7 +63,8 @@ TEMPLATES = [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages'
+                'django.contrib.messages.context_processors.messages',
+                'consume.context_processors.auth_urls',
             ],
         },
     },
@@ -133,9 +134,11 @@ AUTH_SERVICE_LOGOUT_PAGE = config(
 AUTH_SERVICE_SESSION_COOKIE = config(
     'AUTH_SERVICE_SESSION_COOKIE', default='sessionid'
 )
+PROVIDER_SESSION_COOKIE = config(
+    'PROVIDER_SESSION_COOKIE', default='provider_sessionid'
+)
 AUTH_SERVICE_TIMEOUT = config('AUTH_SERVICE_TIMEOUT', default=3, cast=int)
 AUTH_SERVICE_VERIFY_SSL = config('AUTH_SERVICE_VERIFY_SSL', default=True, cast=bool)
-AUTH_SERVICE_ENFORCE = config('AUTH_SERVICE_ENFORCE', default=True, cast=bool)
 
 
 def _parse_csv(value):
@@ -143,7 +146,15 @@ def _parse_csv(value):
 
 
 AUTH_SERVICE_ALLOWLIST = _parse_csv(
-    config('AUTH_SERVICE_ALLOWLIST', default='')
+    config('AUTH_SERVICE_ALLOWLIST', default='/health,/metrics')
+)
+AUTH_SERVICE_ENFORCE = config('AUTH_SERVICE_ENFORCE', default=False, cast=bool)
+
+# Consumed offers tracking
+CONSUMED_OFFERS_BASE_URL = config('CONSUMED_OFFERS_BASE_URL', default='').strip()
+CONSUMED_OFFERS_TIMEOUT = config('CONSUMED_OFFERS_TIMEOUT', default=3, cast=int)
+CONSUMED_OFFERS_VERIFY_SSL = config(
+    'CONSUMED_OFFERS_VERIFY_SSL', default=True, cast=bool
 )
 
 # Default primary key field type

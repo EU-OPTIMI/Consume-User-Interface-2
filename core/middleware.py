@@ -1,165 +1,141 @@
 import logging
-from urllib.parse import urljoin, urlencode
+from urllib.parse import urljoin
 
 import requests
 from django.conf import settings
 from django.http import JsonResponse, HttpResponseRedirect
 
+logger = logging.getLogger(__name__)
 
-DEFAULT_ALLOWLIST = [
-    "/health",
-    "/metrics",
-    "/api/auth/profile",
-]
+
+class RemoteAuthUser:
+    def __init__(self, profile):
+        self.profile = profile or {}
+        self.id = self.profile.get("id") or self.profile.get("uuid")
+        self.username = (
+            self.profile.get("username")
+            or self.profile.get("email")
+            or self.profile.get("name")
+        )
+        self.email = self.profile.get("email")
+        self.is_staff = bool(self.profile.get("is_staff", False))
+        self.is_superuser = bool(self.profile.get("is_superuser", False))
+        self.is_authenticated = True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    def __str__(self):
+        return self.username or "authenticated-user"
 
 
 class AuthServiceMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
-        self.logger = logging.getLogger(__name__)
-
-    def __call__(self, request):
-        if not getattr(settings, "AUTH_SERVICE_ENFORCE", True):
-            return self.get_response(request)
-
-        base_url = getattr(settings, "AUTH_SERVICE_BASE_URL", "").strip()
-        if not base_url:
-            self.logger.warning(
-                "Auth enforcement skipped: AUTH_SERVICE_BASE_URL not set path=%s",
-                request.path,
-            )
-            return self.get_response(request)
-
-        if self._is_allowlisted(request.path):
-            return self.get_response(request)
-
-        cookies = self._build_cookie_jar(request)
-        if not cookies:
-            return self._deny(request, "missing_cookie")
-
-        profile_url = self._build_profile_url(base_url)
-        try:
-            response = requests.get(
-                profile_url,
-                cookies=cookies,
-                timeout=getattr(settings, "AUTH_SERVICE_TIMEOUT", 3),
-                verify=getattr(settings, "AUTH_SERVICE_VERIFY_SSL", True),
-            )
-        except requests.RequestException as exc:
-            self.logger.warning(
-                "Auth service request failed path=%s reason=%s",
-                request.path,
-                exc,
-            )
-            return self._deny(request, "auth_service_error")
-
-        if response.status_code == 200:
-            profile = {}
-            try:
-                profile = response.json() or {}
-            except ValueError:
-                self.logger.warning(
-                    "Auth service returned invalid JSON path=%s", request.path
-                )
-            request.auth_profile = profile
-            request.auth_authenticated = True
-            user_id = self._extract_user_id(profile)
-            self.logger.info(
-                "Auth success path=%s user=%s",
-                request.path,
-                user_id or "unknown",
-            )
-            return self.get_response(request)
-
-        if response.status_code == 401:
-            return self._deny(request, "unauthenticated")
-
-        self.logger.warning(
-            "Auth service unexpected status=%s path=%s",
-            response.status_code,
-            request.path,
+        self.base_url = getattr(settings, "AUTH_SERVICE_BASE_URL", "").rstrip("/")
+        self.profile_endpoint = getattr(
+            settings, "AUTH_SERVICE_PROFILE_ENDPOINT", "/api/auth/me/"
         )
-        return self._deny(request, f"status_{response.status_code}")
-
-    def _is_allowlisted(self, path):
-        allowlist = list(DEFAULT_ALLOWLIST)
-        extra = getattr(settings, "AUTH_SERVICE_ALLOWLIST", [])
-        if extra:
-            allowlist.extend(extra)
-        for entry in allowlist:
-            if not entry:
-                continue
-            if path == entry:
-                return True
-            if path.startswith(entry.rstrip("/") + "/"):
-                return True
-        return False
-
-    def _build_cookie_jar(self, request):
-        cookie_names = []
-        configured = getattr(settings, "AUTH_SERVICE_SESSION_COOKIE", "sessionid")
-        cookie_names.append(configured)
-        cookie_names.extend(["sessionid", "auth_sessionid"])
-
-        cookies = {}
-        seen = set()
-        for name in cookie_names:
-            if name in seen:
-                continue
-            seen.add(name)
-            value = request.COOKIES.get(name)
-            if value:
-                cookies[name] = value
-        return cookies
-
-    def _build_profile_url(self, base_url):
-        endpoint = getattr(settings, "AUTH_SERVICE_PROFILE_ENDPOINT", "/api/auth/me/")
-        if endpoint.startswith("http://") or endpoint.startswith("https://"):
-            return endpoint
-        return urljoin(base_url.rstrip("/") + "/", endpoint.lstrip("/"))
-
-    def _build_login_url(self, base_url, next_url):
-        login_page = getattr(
+        self.login_page = getattr(
             settings, "AUTH_SERVICE_LOGIN_PAGE", "/api/auth/login-page/"
         )
-        if login_page.startswith("http://") or login_page.startswith("https://"):
-            login_url = login_page
-        else:
-            login_url = urljoin(base_url.rstrip("/") + "/", login_page.lstrip("/"))
-        query = urlencode({"next": next_url})
-        return f"{login_url}?{query}"
-
-    def _is_api_request(self, request):
-        accept = request.headers.get("Accept", "")
-        content_type = request.headers.get("Content-Type", "")
-        if "application/json" in accept.lower():
-            return True
-        if "application/json" in content_type.lower():
-            return True
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return True
-        if request.path.startswith("/api/"):
-            return True
-        return False
-
-    def _deny(self, request, reason):
-        self.logger.info(
-            "Auth failure path=%s reason=%s",
-            request.path,
-            reason,
+        self.session_cookie_name = getattr(
+            settings, "AUTH_SERVICE_SESSION_COOKIE", settings.SESSION_COOKIE_NAME
         )
-        if request.method in ("GET", "HEAD") and not self._is_api_request(request):
-            base_url = getattr(settings, "AUTH_SERVICE_BASE_URL", "").strip()
-            next_url = request.build_absolute_uri()
-            login_url = self._build_login_url(base_url, next_url)
-            return HttpResponseRedirect(login_url)
-        return JsonResponse({"detail": "Authentication required."}, status=401)
+        self.timeout = getattr(settings, "AUTH_SERVICE_TIMEOUT", 3)
+        self.verify_ssl = getattr(settings, "AUTH_SERVICE_VERIFY_SSL", True)
+        configured_allowlist = tuple(getattr(settings, "AUTH_SERVICE_ALLOWLIST", []))
+        builtin_allowlist = (
+            "/health",
+            "/metrics",
+            "/api/auth/profile",
+            "/api/auth/profile/",
+        )
+        self.allowlist = tuple(dict.fromkeys([*configured_allowlist, *builtin_allowlist]))
+        self.enforce = getattr(settings, "AUTH_SERVICE_ENFORCE", False)
 
-    def _extract_user_id(self, profile):
-        if not isinstance(profile, dict):
-            return None
-        for key in ("id", "user_id", "uuid", "email", "username"):
-            value = profile.get(key)
-            if value:
-                return value
-        return None
+    def __call__(self, request):
+        request.auth_user = None
+        request.auth_profile = None
+
+        if not self.base_url or self._is_allowlisted(request.path):
+            return self.get_response(request)
+
+        session_token, auth_cookies = self._get_session_cookies(request)
+        if not session_token:
+            if self.enforce:
+                return self._reject_or_redirect(
+                    request, "Authentication cookie missing."
+                )
+            return self.get_response(request)
+
+        profile, failure_reason = self._fetch_profile(auth_cookies)
+        if profile:
+            user = RemoteAuthUser(profile)
+            request.auth_user = user
+            request.auth_profile = profile
+            request.user = user
+            request._cached_user = user
+            logger.info("Auth success path=%s user=%s", request.path, user)
+        elif self.enforce:
+            logger.info("Auth failure path=%s reason=%s", request.path, failure_reason)
+            return self._reject_or_redirect(
+                request, failure_reason or "Authentication failed."
+            )
+
+        return self.get_response(request)
+
+    def _is_allowlisted(self, path):
+        return any(path.startswith(prefix) for prefix in self.allowlist)
+
+    def _get_session_cookies(self, request):
+        cookie_names = (self.session_cookie_name, "sessionid", "auth_sessionid")
+        session_token = None
+        cookies = {}
+        for name in cookie_names:
+            token = request.COOKIES.get(name)
+            if token:
+                cookies[name] = token
+                if session_token is None:
+                    session_token = token
+        if session_token:
+            cookies.setdefault(self.session_cookie_name, session_token)
+            cookies.setdefault("sessionid", session_token)
+            cookies.setdefault("auth_sessionid", session_token)
+        return session_token, cookies
+
+    def _fetch_profile(self, cookies):
+        url = urljoin(f"{self.base_url}/", self.profile_endpoint.lstrip("/"))
+        try:
+            response = requests.get(
+                url,
+                headers={"Accept": "application/json"},
+                cookies=cookies,
+                timeout=self.timeout,
+                verify=self.verify_ssl,
+            )
+        except requests.RequestException:
+            return None, "Authentication service unavailable."
+
+        if response.status_code == 200:
+            payload = response.json()
+            profile = payload.get("user") or payload.get("data") or payload
+            return profile, None
+
+        if response.status_code == 401:
+            return None, "Authentication expired or invalid."
+
+        return None, "Authentication service error."
+
+    @staticmethod
+    def _reject_unauthorized(message):
+        return JsonResponse({"detail": message}, status=401)
+
+    def _reject_or_redirect(self, request, message):
+        if request.method in ("GET", "HEAD") and self.login_page:
+            next_url = request.build_absolute_uri()
+            login_url = urljoin(f"{self.base_url}/", self.login_page.lstrip("/"))
+            redirect_url = f"{login_url}?next={next_url}"
+            return HttpResponseRedirect(redirect_url)
+        return self._reject_unauthorized(message)

@@ -8,7 +8,8 @@ from decouple import config
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
-from .connector import runner, get_policy
+from django.conf import settings
+from .connector import runner, get_policy, get_selected_offer
 from .broker import get_all_connectors
 
 # Configuration from .env
@@ -129,6 +130,130 @@ def _match_leg_emission(leg_label, start, end, emissions_map):
             if key.lower() == candidate.lower():
                 return value
     return None
+
+
+def _extract_auth_user_id(profile):
+    if not isinstance(profile, dict):
+        return None
+    for key in ("id", "uuid", "user_id"):
+        value = profile.get(key)
+        if value:
+            return value
+    return None
+
+
+def _fetch_consumed_offers(request):
+    base_url = getattr(settings, "CONSUMED_OFFERS_BASE_URL", "").strip()
+    if not base_url:
+        logger.warning("Consumed offers fetch skipped: base URL not set")
+        return None, "Consumed offers service not configured."
+    user_id = _extract_auth_user_id(getattr(request, "auth_profile", None))
+    if not user_id:
+        return None, "Authenticated user ID not available."
+    endpoint = urljoin(
+        base_url.rstrip("/") + "/",
+        f"api/consumers/{user_id}/get-consumed-offers/",
+    )
+    try:
+        response = requests.get(
+            endpoint,
+            timeout=getattr(settings, "CONSUMED_OFFERS_TIMEOUT", 3),
+            verify=getattr(settings, "CONSUMED_OFFERS_VERIFY_SSL", True),
+        )
+    except requests.RequestException as exc:
+        logger.warning("Consumed offers fetch error user_id=%s reason=%s", user_id, exc)
+        return None, "Consumed offers service unavailable."
+    if response.status_code != 200:
+        logger.warning(
+            "Consumed offers fetch failed status=%s user_id=%s",
+            response.status_code,
+            user_id,
+        )
+        return None, "Unable to load consumed offers."
+    try:
+        payload = response.json()
+    except ValueError:
+        return None, "Consumed offers response was invalid."
+    return payload, None
+
+
+def _normalize_consumed_offer_ids(payload):
+    if isinstance(payload, dict):
+        items = (
+            payload.get("consumed_offer_ids")
+            or payload.get("offer_ids")
+            or payload.get("offers")
+            or payload.get("data")
+            or []
+        )
+    elif isinstance(payload, list):
+        items = payload
+    else:
+        items = []
+
+    offer_ids = []
+    for item in items:
+        if isinstance(item, dict):
+            offer_id = (
+                item.get("offer_id")
+                or item.get("id")
+                or item.get("uuid")
+            )
+        else:
+            offer_id = item
+        if offer_id:
+            offer_ids.append(str(offer_id))
+    return offer_ids
+
+
+def _build_offer_overview(offer, offer_id):
+    return {
+        'offer_title': offer.get('title') or offer.get('offer_title'),
+        'offer_description': offer.get('description') or offer.get('offer_description'),
+        'offer_keywords': offer.get('keywords') or offer.get('offer_keywords') or [],
+        'offer_publisher': offer.get('publisher') or offer.get('offer_publisher'),
+        'offer_id': offer_id,
+    }
+
+
+def _track_consumed_offer(request, offer_id):
+    base_url = getattr(settings, "CONSUMED_OFFERS_BASE_URL", "").strip()
+    if not base_url:
+        logger.warning("Consumed offers tracking skipped: base URL not set")
+        return
+    user_id = _extract_auth_user_id(getattr(request, "auth_profile", None))
+    if not user_id:
+        logger.warning("Consumed offers tracking skipped: missing user id")
+        return
+    endpoint = urljoin(
+        base_url.rstrip("/") + "/",
+        f"api/consumers/{user_id}/set-consumed-offers/",
+    )
+    payload = {"offer_ids": [offer_id]}
+    print(f"Tracking consumed offer {offer_id} for user {user_id} at {endpoint}")
+    print(f"Payload: {payload}")
+    try:
+        response = requests.post(
+            endpoint,
+            json=payload,
+            timeout=getattr(settings, "CONSUMED_OFFERS_TIMEOUT", 3),
+            verify=getattr(settings, "CONSUMED_OFFERS_VERIFY_SSL", True),
+        )
+        print(response.status_code, response.text)
+        if response.status_code >= 400:
+            logger.warning(
+                "Consumed offers tracking failed status=%s offer_id=%s user_id=%s",
+                response.status_code,
+                offer_id,
+                user_id,
+            )
+    except requests.RequestException as exc:
+        logger.warning(
+            "Consumed offers tracking error offer_id=%s user_id=%s reason=%s",
+            offer_id,
+            user_id,
+            exc,
+        )
 
 
 def _build_route_map(consumption):
@@ -540,6 +665,28 @@ def dataspace_connectors(request):
     })
 
 
+def consumed_offers(request):
+    payload, error = _fetch_consumed_offers(request)
+    offers = []
+    for offer_id in _normalize_consumed_offer_ids(payload):
+        try:
+            offer = get_selected_offer(offer_id)
+        except requests.RequestException as exc:
+            logger.warning(
+                "Consumed offer lookup failed offer_id=%s reason=%s",
+                offer_id,
+                exc,
+            )
+            continue
+        offers.append(_build_offer_overview(offer, offer_id))
+    return render(request, 'consume/consumed_offers.html', {
+        'consumed_offers': offers,
+        'consumed_offers_error': error,
+    })
+
+
+
+
 def selected_offer(request, offer_id):
     """
     Fetch the full details of one offer and render it.
@@ -592,6 +739,7 @@ def selected_offer(request, offer_id):
             consumption_error = str(exc)
         else:
             route_map = _build_route_map(consumption)
+            _track_consumed_offer(request, offer_id)
 
     # stepper state flags
     step_state = {
