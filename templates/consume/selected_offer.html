@@ -415,7 +415,7 @@
 
                 <div class="detail-card mb-4" id="policy-card">
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                        <h2 class="section-title mb-0">Policy &amp; license</h2>
+                        <h2 class="section-title mb-0">Policy &amp; usage rights</h2>
                         <span class="text-muted small">Review before consuming</span>
                     </div>
                     <div class="mb-3">
@@ -453,7 +453,7 @@
                     </div>
                 </div>
 
-                <div class="detail-card mb-4">
+               <!--- <div class="detail-card mb-4">
                     <div class="d-flex align-items-center justify-content-between">
                         <h2 class="section-title mb-0">Provider extras</h2>
                     </div>
@@ -483,125 +483,21 @@
                             Start the explore &amp; consume flow to load provider metadata for this offer.
                         </div>
                     {% endif %}
-                </div>
+                </div> --->
 
-                <div class="detail-card mb-4">
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                        <h2 class="section-title mb-0">Route analysis</h2>
-                        <span class="text-muted small">Per-leg route &amp; emissions overview</span>
-                    </div>
-                    <p class="text-muted small mb-3">
-                        We map every transport leg from the consumed payload and color-code the path by relative emissions so you can spot hotspots at a glance.
-                    </p>
-                    {% if route_map %}
-                        <div class="map-area mb-3" id="route-map"></div>
-                        <div class="map-legend">
-                            <div class="legend-item">
-                                <span class="legend-swatch legend-low"></span> Low (&lt; 5 kg CO2e)
-                            </div>
-                            <div class="legend-item">
-                                <span class="legend-swatch legend-medium"></span> Medium (5–15 kg CO2e)
-                            </div>
-                            <div class="legend-item">
-                                <span class="legend-swatch legend-high"></span> High (&gt; 15 kg CO2e)
-                            </div>
-                        </div>
-                        <div class="route-stats">
-                            <div class="route-stat">
-                                <div class="label">Shipment</div>
-                                <div class="value">{{ route_map.metrics.shipment_id|default:"-" }}</div>
-                            </div>
-                            <div class="route-stat">
-                                <div class="label">Parcel</div>
-                                <div class="value">{{ route_map.metrics.parcel_id|default:"-" }}</div>
-                            </div>
-                            <div class="route-stat">
-                                <div class="label">Total emissions</div>
-                                <div class="value">
-                                    {{ route_map.metrics.total_emissions|default:"-" }}
-                                    {% if route_map.metrics.emissions_unit %}{{ route_map.metrics.emissions_unit }}{% endif %} CO2e
-                                </div>
-                            </div>
-                            <div class="route-stat">
-                                <div class="label">Route distance</div>
-                                <div class="value">
-                                    {% if route_map.metrics.total_distance %}
-                                        {{ route_map.metrics.total_distance }} km
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        {% if route_map.breakdown %}
-                            <div class="route-breakdown mt-3">
-                                <p class="text-muted small mb-2">
-                                    Emission hotspots
-                                    <span class="d-block fw-normal">
-                                        Non-transport activities (e.g., consolidation, cross-docking) that add to the footprint.
-                                    </span>
-                                </p>
-                                <ul class="list-unstyled mb-0">
-                                    {% for item in route_map.breakdown %}
-                                        <li class="mb-1">
-                                            <strong>{{ item.activity }}</strong> — {{ item.co2e }} kg CO2e
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-                        {% if route_map.leg_details %}
-                            <div class="table-responsive mt-3">
-                                <p class="text-muted small mb-2">
-                                    Transport legs
-                                    <span class="d-block fw-normal">
-                                        Distances and emissions per route leg so you can compare contributions.
-                                    </span>
-                                </p>
-                                <table class="table route-table align-middle mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">Leg</th>
-                                            <th scope="col" class="text-end">Distance (km)</th>
-                                            <th scope="col" class="text-end">Emissions (kg CO2e)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for leg in route_map.leg_details %}
-                                        <tr>
-                                            <td>{{ leg.sequence|default:"-" }} · {{ leg.label }}</td>
-                                            <td class="text-end">{{ leg.distance|default:"-" }}</td>
-                                            <td class="text-end">
-                                                {% if leg.emissions is not None %}
-                                                    {{ leg.emissions }}
-                                                {% else %}
-                                                    —
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        {% endif %}
-                    {% else %}
-                        <div class="alert alert-info mb-0">
-                            Start the explore &amp; consume flow to visualize the shipment route.
-                        </div>
-                    {% endif %}
-                </div>
+             
 
             </div>
 
             <div class="col-lg-6">
                 {% if not should_consume %}
                 <div class="cta-card">
-                    <h3>Ready to explore?</h3>
+                    <h3>Data access</h3>
                     <p class="text-muted small mb-3">We'll guide you through the IDS negotiation and hand you the access URL with a ready-to-use curl command.</p>
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" value="" id="policyConsent">
                         <label class="form-check-label small" for="policyConsent">
-                            I have reviewed the policy &amp; license details in the card above and agree to the stated terms.
+                            I have reviewed the data access policy &amp; usage rights details and agree to the stated terms.
                         </label>
                     </div>
                     <a href="?consume=1" class="btn btn-primary btn-lg w-100 mb-3 disabled" id="startConsumeBtn" aria-disabled="true">
