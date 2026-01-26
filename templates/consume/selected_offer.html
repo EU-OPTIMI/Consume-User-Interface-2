@@ -414,12 +414,50 @@
                 </div>
 
                 <div class="detail-card mb-4" id="policy-card">
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                        <h2 class="section-title mb-0">Policy &amp; usage rights</h2>
-                        <span class="text-muted small">Review before consuming</span>
-                    </div>
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h2 class="section-title mb-0">Data access policy</h2>
+
+        </div>
+        <span class="text-muted small">Review before consuming</span>
+    </div>
+
+    <div class="mb-3">
+        <div class="text-muted" >
+            Accessible between dates:
+        </div>
+        <div class="d-flex gap-3 flex-wrap">
+            <div class="info-row">
+                <span>From</span>
+                <span>{{ offer.creationDate|slice:":19"|default:"-" }}</span>
+            </div>
+            <div class="info-row">
+                <span>Until</span>
+                <span>{{ offer.modificationDate|slice:":19"|default:"-" }}</span>
+            </div>
+        </div>
+    </div>
+
+   <div class="pt-2">
+    <h2 class="section-title mb-1">Data usage rights</h2>
+    
+    <div class="text-muted">
+        As per INDEPENDENT project Joint Controller Agreement (JCA)
+        
+        <span class="ms-2" id="usageRightsDoc">
+            <i class="bi bi-file-earmark-text text-primary me-1"></i>
+            <a href="{{ usage_rights_url|default:'#' }}" 
+               target="_blank" 
+               rel="noopener" 
+               id="usageRightsDocLink" 
+               class="text-primary text-decoration-none fw-bold">
+                View
+            </a>
+        </span>
+    </div>
+</div>
+                   <!-- <div class="mb-3">
+                       <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="fw-semibold">License</span>
                             {% if offer.license %}
                                 <a href="{{ offer.license }}" target="_blank" rel="noopener" class="small">Open in new tab</a>
@@ -438,8 +476,8 @@
                         {% else %}
                             <p class="text-muted small mb-0">No license document was provided for this offer.</p>
                         {% endif %}
-                    </div>
-                    <div class="mb-3">
+                    </div>--> 
+                    <!--<div class="mb-3">
                         <h4 class="small text-uppercase text-muted mb-1">Policy summary</h4>
                         <p class="small mb-0">{{ policy_summary }}</p>
                     </div>
@@ -450,7 +488,7 @@
                             <h4 class="small text-uppercase text-muted mt-3 mb-1">Policy (live from connector)</h4>
                             <pre class="code-block"><code>{{ live_policy }}</code></pre>
                         {% endif %}
-                    </div>
+                    </div>--> 
                 </div>
 
                <!--- <div class="detail-card mb-4">

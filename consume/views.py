@@ -699,11 +699,12 @@ def selected_offer(request, offer_id):
         offer = resp.json()
         offer['offer_url'] = url
         offer['offer_id']  = offer_id
+        
     except requests.exceptions.RequestException as e:
         return render(request, 'consume/error.html', {
             'error': f"Failed to fetch offer {offer_id}: {e}"
         })
-
+    
     live_policy = get_policy(raw_id) or {}
     policy_source = (
         live_policy
@@ -713,6 +714,8 @@ def selected_offer(request, offer_id):
         or offer.get('license')
         or {}
     )
+   
+
     if isinstance(policy_source, (dict, list)):
         policy_raw = json.dumps(policy_source, indent=2)
     else:
@@ -723,7 +726,8 @@ def selected_offer(request, offer_id):
         or offer.get('policyDescription')
         or "Review and agree to the provider's license/policy terms before consuming the offer."
     )
-
+    
+    
     # Try to consume offer immediately so the page can surface IDS workflow info
     offer_url = f"{BASE_URL.rstrip('/')}/api/offers/{raw_id}"
     should_consume = request.GET.get('consume') == '1'
@@ -749,6 +753,7 @@ def selected_offer(request, offer_id):
         'consume': consumption is not None,
         'consume_error': consumption_error is not None,
     }
+    usage_rights_url = "https://google.com"
 
     return render(request, 'consume/selected_offer.html', {
         'offer':    offer,
@@ -772,7 +777,8 @@ def selected_offer(request, offer_id):
             }
             for step in (consumption or {}).get('steps', [])
         ] if consumption else None,
-        'route_map': route_map
+        'route_map': route_map,
+        'usage_rights_url': usage_rights_url,
     })
 
 
