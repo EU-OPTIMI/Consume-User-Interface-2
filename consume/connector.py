@@ -38,9 +38,12 @@ def get_selected_offer(offer_id):
     offer = response.json()
     logger.debug("Offer payload: %s", json.dumps(offer, indent=2))
     return offer
+
 def get_policy(offer_id):
     url = f'{CONNECTOR_BASE}api/offers/{offer_id}/policy'
+    print("Fetching policy for offer", offer_id, "at", url)
     response = requests.get(url, headers=AUTH_HEADER, verify=False)
+    print("Policy response status=", response.status_code, "headers=", response.headers)
     if response.status_code == 200:
         try:
             return response.json()

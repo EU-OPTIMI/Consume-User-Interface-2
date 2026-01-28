@@ -51,7 +51,7 @@ Response (404):
 
 Set the following variables in `.env` (or your deployment secret store) so the consumer UI can run the lookup automatically during the consume flow:
 
-- `PROVIDER_UI_BASE`: Base host for the Provider UI, e.g. `https://optimi.collab-cloud.eu`. The app appends `/provide/api/offers/<offer_id>/extras/`.
+- `PROVIDER_UI_BASE`: Base host for the Provider UI, e.g. `https://ds2sandbox2.collab-cloud.eu`. The app appends `/provide/api/offers/<offer_id>/extras/`.
 - `PROVIDER_UI_AUTHORIZATION` *(optional)*: If your Provider UI is secured, supply the bearer/basic header value that should be forwarded with the extras request.
 
 If `PROVIDER_UI_BASE` is omitted, the consumer will first try `BASE_URL` itself (including `/connector` if present) and then fall back to the host root, so leave it unset unless your deployment hosts the Provider UI elsewhere.

@@ -714,7 +714,8 @@ def selected_offer(request, offer_id):
         or offer.get('license')
         or {}
     )
-   
+
+    print("Policy source:", policy_source)
 
     if isinstance(policy_source, (dict, list)):
         policy_raw = json.dumps(policy_source, indent=2)
