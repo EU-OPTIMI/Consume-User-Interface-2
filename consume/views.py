@@ -265,6 +265,18 @@ def _build_route_map(consumption):
     except (TypeError, ValueError):
         return None
 
+    if isinstance(payload, list):
+        selected = None
+        for item in payload:
+            if isinstance(item, dict) and item.get('unified'):
+                selected = item
+                break
+        if not selected and payload and isinstance(payload[0], dict):
+            selected = payload[0]
+        payload = selected if isinstance(selected, dict) else {}
+    if not isinstance(payload, dict):
+        return None
+
     unified = payload.get('unified') or {}
     chains = unified.get('transportChains') or {}
     legs = []
