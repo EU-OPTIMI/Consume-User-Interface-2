@@ -1,6 +1,7 @@
 import requests
 import urllib3
 from decouple import config
+from .connector import parse_json_response
 urllib3.disable_warnings()       # only for dev!
 
 CONNECTOR_BASE = config('CONNECTOR_BASE')
@@ -107,9 +108,8 @@ WHERE {
         print("Response status code:", resp.status_code)
         print("Full response:", resp.text)
         try:
-            return resp.json()
+            return parse_json_response(resp, "Broker connector discovery")
         except ValueError:
-            # Not JSON — return raw text for inspection
             return {'@graph': [], 'raw': resp.text}
 
     except requests.exceptions.RequestException as e:

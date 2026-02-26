@@ -8,6 +8,33 @@ from django.http import JsonResponse, HttpResponseRedirect
 logger = logging.getLogger(__name__)
 
 
+def _parse_json_response(response, context):
+    content_type = (response.headers.get("Content-Type") or "").lower()
+    if response.status_code != 200 or "json" not in content_type:
+        body_preview = response.content[:200].decode("utf-8", errors="replace")
+        logger.warning(
+            "%s unexpected response status=%s content_type=%s headers=%s body_preview=%s",
+            context,
+            response.status_code,
+            response.headers.get("Content-Type", ""),
+            response.headers,
+            body_preview,
+        )
+        return None
+    try:
+        return response.json()
+    except ValueError:
+        body_preview = response.content[:200].decode("utf-8", errors="replace")
+        logger.warning(
+            "%s invalid JSON status=%s content_type=%s body_preview=%s",
+            context,
+            response.status_code,
+            response.headers.get("Content-Type", ""),
+            body_preview,
+        )
+        return None
+
+
 class RemoteAuthUser:
     def __init__(self, profile):
         self.profile = profile or {}
@@ -119,7 +146,9 @@ class AuthServiceMiddleware:
             return None, "Authentication service unavailable."
 
         if response.status_code == 200:
-            payload = response.json()
+            payload = _parse_json_response(response, "Auth profile endpoint")
+            if payload is None:
+                return None, "Authentication service returned invalid profile payload."
             profile = payload.get("user") or payload.get("data") or payload
             return profile, None
 

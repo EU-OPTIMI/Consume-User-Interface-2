@@ -26,6 +26,41 @@ AUTH_HEADER = {
 logger = logging.getLogger(__name__)
 
 
+def parse_json_response(response, context, expected_status=200):
+    """
+    Validate and parse a JSON response defensively.
+    """
+    content_type = (response.headers.get("Content-Type") or "").lower()
+    if response.status_code != expected_status or "json" not in content_type:
+        body_preview = response.content[:200].decode("utf-8", errors="replace")
+        logger.warning(
+            "%s unexpected response status=%s content_type=%s headers=%s body_preview=%s",
+            context,
+            response.status_code,
+            response.headers.get("Content-Type", ""),
+            response.headers,
+            body_preview,
+        )
+        raise ValueError(
+            f"{context} expected HTTP {expected_status} JSON response but received "
+            f"status={response.status_code} content_type={response.headers.get('Content-Type', '')!r}"
+        )
+
+    try:
+        return response.json()
+    except ValueError as exc:
+        body_preview = response.content[:200].decode("utf-8", errors="replace")
+        logger.warning(
+            "%s invalid JSON status=%s content_type=%s headers=%s body_preview=%s",
+            context,
+            response.status_code,
+            response.headers.get("Content-Type", ""),
+            response.headers,
+            body_preview,
+        )
+        raise ValueError(f"{context} returned invalid JSON payload") from exc
+
+
 def get_selected_offer(offer_id):
     """
     Fetch the offer details for a given offer_id from the connector API.
@@ -34,8 +69,7 @@ def get_selected_offer(offer_id):
     logger.info("Fetching offer %s at %s", offer_id, url)
     response = requests.get(url, headers=AUTH_HEADER, verify=False)
     logger.debug("Offer response status=%s headers=%s", response.status_code, response.headers)
-    response.raise_for_status()
-    offer = response.json()
+    offer = parse_json_response(response, f"Offer {offer_id}")
     logger.debug("Offer payload: %s", json.dumps(offer, indent=2))
     return offer
 def get_policy(offer_id):
@@ -43,7 +77,7 @@ def get_policy(offer_id):
     response = requests.get(url, headers=AUTH_HEADER, verify=False)
     if response.status_code == 200:
         try:
-            return response.json()
+            return parse_json_response(response, f"Offer policy {offer_id}")
         except ValueError:
             return response.text
     return None
@@ -83,24 +117,7 @@ def get_selected_offers_catalog_url(offer):
         response.status_code,
         response.headers
     )
-    if response.status_code != 200:
-        logger.error(
-            "Catalog request failed url=%s status=%s body=%s",
-            catalog_url,
-            response.status_code,
-            response.text
-        )
-        raise ValueError(f"Failed to fetch catalog URL: {catalog_url}, Status Code: {response.status_code}")
-
-    try:
-        data = response.json()
-    except json.JSONDecodeError as e:
-        logger.exception(
-            "Invalid JSON decoding catalog response url=%s body=%s",
-            catalog_url,
-            response.text
-        )
-        raise ValueError(f"Invalid JSON response from {catalog_url}")
+    data = parse_json_response(response, f"Catalog listing {catalog_url}")
 
     try:
         first_catalog = data["_embedded"]["catalogs"][0]
@@ -140,8 +157,7 @@ def description_request(offer, catalog_url):
         response.headers,
         response.text
     )
-    response.raise_for_status()
-    response_json = response.json()
+    response_json = parse_json_response(response, "IDS description request")
     logger.debug("Description JSON: %s", json.dumps(response_json, indent=2))
 
     try:
@@ -208,8 +224,7 @@ def contract_request(action, artifact, offer_id):
         response.headers,
         response.text
     )
-    response.raise_for_status()
-    response_json = response.json()
+    response_json = parse_json_response(response, "IDS contract request")
     logger.debug("Contract response JSON: %s", json.dumps(response_json, indent=2))
     agreement_url_1 = response_json["_links"]["artifacts"]["href"]
     agreement_url = agreement_url_1.split('{')[0]
@@ -253,24 +268,7 @@ def get_agreement(agreement_url):
         response.status_code,
         response.headers
     )
-    if response.status_code != 200:
-        logger.error(
-            "Artifacts request failed url=%s status=%s body=%s",
-            artifacts_url,
-            response.status_code,
-            response.text
-        )
-        raise ValueError(f"Failed to fetch artifacts URL: {artifacts_url}, Status Code: {response.status_code}")
-
-    try:
-        data = response.json()
-    except json.JSONDecodeError as e:
-        logger.exception(
-            "Invalid JSON decoding artifacts response url=%s body=%s",
-            artifacts_url,
-            response.text
-        )
-        raise ValueError(f"Invalid JSON response from {artifacts_url}")
+    data = parse_json_response(response, f"Artifacts listing {artifacts_url}")
 
     try:
         first_artifact = data["_embedded"]["artifacts"][0]
@@ -296,6 +294,8 @@ def get_data(artifact_url):
     Fetch the actual data at the artifact URL.
     """
     headers = AUTH_HEADER.copy()
+    headers["Accept"] = "application/json"
+    headers["Accept-Encoding"] = "identity"
 
     response = requests.get(artifact_url, headers=headers, verify=False)
     logger.info("Fetching artifact payload from %s", artifact_url)
@@ -374,7 +374,7 @@ def runner(offer_url):
     response_headers = {
         k: v for k, v in response.headers.items()
     }
-    preview = response.text
+    preview = response.content[:2000].decode("utf-8", errors="replace")
 
     return {
         'artifact_url': artifact_url,

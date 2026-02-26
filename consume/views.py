@@ -9,7 +9,7 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
 from django.conf import settings
-from .connector import runner, get_policy, get_selected_offer
+from .connector import runner, get_policy, get_selected_offer, parse_json_response
 from .broker import get_all_connectors
 
 # Configuration from .env
@@ -165,13 +165,17 @@ def _fetch_consumed_offers(request):
         return None, "Consumed offers service unavailable."
     if response.status_code != 200:
         logger.warning(
-            "Consumed offers fetch failed status=%s user_id=%s",
+            "Consumed offers fetch failed status=%s user_id=%s body=%s",
             response.status_code,
             user_id,
+            response.text[:200],
         )
         return None, "Unable to load consumed offers."
     try:
-        payload = response.json()
+        payload = parse_json_response(
+            response,
+            f"Consumed offers lookup for user {user_id}",
+        )
     except ValueError:
         return None, "Consumed offers response was invalid."
     return payload, None
@@ -512,15 +516,8 @@ def _perform_extras_request(extras_url, offer_id, base_url):
         }
 
     try:
-        payload = resp.json()
-    except ValueError as exc:
-        logger.warning(
-            "Offer extras invalid JSON for %s (%s): %s body=%s",
-            offer_id,
-            extras_url,
-            exc,
-            body[:150]
-        )
+        payload = parse_json_response(resp, f"Offer extras {offer_id} ({extras_url})")
+    except ValueError:
         return {
             'status': 'error',
             'error': 'Invalid JSON payload',
@@ -577,8 +574,7 @@ def _fetch_all_pages(base_url, embedded_key):
             headers=AUTH_HEADERS,
             verify=False
         )
-        resp.raise_for_status()
-        payload = resp.json()
+        payload = parse_json_response(resp, f"Paged fetch {base_url} page={page}")
 
         batch = payload.get('_embedded', {}).get(embedded_key, [])
         items.extend(batch)
@@ -683,7 +679,7 @@ def consumed_offers(request):
     for offer_id in _normalize_consumed_offer_ids(payload):
         try:
             offer = get_selected_offer(offer_id)
-        except requests.RequestException as exc:
+        except (requests.RequestException, ValueError) as exc:
             logger.warning(
                 "Consumed offer lookup failed offer_id=%s reason=%s",
                 offer_id,
@@ -708,10 +704,10 @@ def selected_offer(request, offer_id):
         url = f"{BASE_URL.rstrip('/')}/api/offers/{raw_id}"
         resp = requests.get(url, headers=AUTH_HEADERS, verify=False)
         resp.raise_for_status()
-        offer = resp.json()
+        offer = parse_json_response(resp, f"Selected offer {raw_id}")
         offer['offer_url'] = url
         offer['offer_id']  = offer_id
-    except requests.exceptions.RequestException as e:
+    except (requests.exceptions.RequestException, ValueError) as e:
         return render(request, 'consume/error.html', {
             'error': f"Failed to fetch offer {offer_id}: {e}"
         })

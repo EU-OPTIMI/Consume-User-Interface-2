@@ -1,6 +1,10 @@
 # Consume# Consume-User-Interface-2
 # Consume-User-Interface-2
 
+## Connector API hardening
+
+For `/connector/api/*` JSON header/compression/proxy hardening (nginx + Cloudflare), see [`docs/connector_api_hardening.md`](docs/connector_api_hardening.md).
+
 ## Offer Extras Lookup
 
 Before processing any offer, call the Provider UI extras API to retrieve the `data_model` and `purpose_of_use` values that are not provided with the connector metadata.
